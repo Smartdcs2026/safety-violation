@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+
+  <meta
+    name="theme-color"
+    content="#0f766e"
+  >
+
+  <meta
+    name="description"
+    content="ระบบแจ้งการกระทำที่ไม่ปลอดภัยในพื้นที่ทำงาน"
+  >
+
+  <title>
+    ระบบแจ้งการกระทำที่ไม่ปลอดภัย
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="styles.css"
+  >
+</head>
+
+<body>
+  <div
+    id="loadingOverlay"
+    class="loading-overlay"
+  >
+    <div class="loading-card">
+      <div class="spinner"></div>
+
+      <div
+        id="loadingText"
+        class="loading-text"
+      >
+        กำลังเตรียมระบบ...
+      </div>
+    </div>
+  </div>
+
+
+  <main class="app-shell">
+    <header class="app-header">
+      <div class="brand-row">
+        <div class="logo-box">
+          <img
+            id="appLogo"
+            class="app-logo"
+            alt="โลโก้"
+          >
+        </div>
+
+        <div class="brand-content">
+          <h1>
+            แจ้งการกระทำที่ไม่ปลอดภัย
+          </h1>
+
+          <p>
+            บันทึกเหตุการณ์และหลักฐานในพื้นที่ทำงาน
+          </p>
+        </div>
+      </div>
+
+      <div class="status-row">
+        <span
+          id="apiStatus"
+          class="status-chip status-waiting"
+        >
+          กำลังตรวจระบบ
+        </span>
+
+        <span
+          id="modeStatus"
+          class="status-chip status-neutral"
+        >
+          WEB
+        </span>
+
+        <span
+          id="currentClock"
+          class="clock-chip"
+        >
+          --/--/---- --:--:--
+        </span>
+      </div>
+    </header>
+
+
+    <section
+      id="systemError"
+      class="alert-box alert-error hidden"
+      role="alert"
+    >
+      <strong>
+        ไม่สามารถเชื่อมต่อระบบได้
+      </strong>
+
+      <div id="systemErrorText"></div>
+
+      <button
+        id="retryButton"
+        class="button button-outline button-small"
+        type="button"
+      >
+        ลองใหม่
+      </button>
+    </section>
+
+
+    <section class="card user-card">
+      <div class="section-heading">
+        <div>
+          <h2>
+            ข้อมูลผู้ใช้งาน
+          </h2>
+
+          <p>
+            ใช้ข้อมูลจากบัญชี LINE ของผู้บันทึก
+          </p>
+        </div>
+      </div>
+
+      <div class="user-layout">
+        <div class="avatar-wrap">
+          <img
+            id="userAvatar"
+            class="user-avatar"
+            alt="รูปโปรไฟล์"
+          >
+        </div>
+
+        <div class="user-info">
+          <div
+            id="userDisplayName"
+            class="user-name"
+          >
+            ยังไม่ได้เข้าสู่ระบบ LINE
+          </div>
+
+          <div
+            id="userId"
+            class="user-id"
+          >
+            LINE User ID: -
+          </div>
+
+          <div class="user-status-row">
+            <span
+              id="loginStatus"
+              class="status-chip status-neutral"
+            >
+              ยังไม่เข้าสู่ระบบ
+            </span>
+
+            <span
+              id="friendStatus"
+              class="status-chip status-neutral"
+            >
+              ยังไม่ตรวจสอบเพื่อน
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button
+          id="lineLoginButton"
+          class="button button-line hidden"
+          type="button"
+        >
+          เข้าสู่ระบบ LINE
+        </button>
+
+        <button
+          id="addFriendButton"
+          class="button button-secondary hidden"
+          type="button"
+        >
+          เพิ่ม LINE Bot เป็นเพื่อน
+        </button>
+      </div>
+
+      <div
+        id="liffNotice"
+        class="inline-notice hidden"
+      ></div>
+    </section>
+
+
+    <form
+      id="reportForm"
+      class="form-stack"
+      novalidate
+    >
+      <section class="card">
+        <div class="section-heading">
+          <div>
+            <h2>
+              ข้อมูลการตรวจ
+            </h2>
+
+            <p>
+              กรุณาระบุข้อมูลให้ครบถ้วน
+            </p>
+          </div>
+        </div>
+
+        <div class="form-grid two-columns">
+          <div class="form-field">
+            <label for="workShift">
+              กะทำงาน
+              <span class="required">*</span>
+            </label>
+
+            <select
+              id="workShift"
+              name="workShift"
+              required
+            >
+              <option value="">
+                กำลังโหลด...
+              </option>
+            </select>
+
+            <div
+              class="field-error"
+              data-error-for="workShift"
+            ></div>
+          </div>
+
+
+          <div class="form-field">
+            <label for="osm">
+              OSM
+              <span class="required">*</span>
+            </label>
+
+            <select
+              id="osm"
+              name="osm"
+              required
+            >
+              <option value="">
+                กำลังโหลด...
+              </option>
+            </select>
+
+            <div
+              class="field-error"
+              data-error-for="osm"
+            ></div>
+          </div>
+
+
+          <div class="form-field full-column">
+            <label for="otm">
+              OTM
+              <span class="required">*</span>
+            </label>
+
+            <select
+              id="otm"
+              name="otm"
+              required
+            >
+              <option value="">
+                กำลังโหลด...
+              </option>
+            </select>
+
+            <div
+              class="field-error"
+              data-error-for="otm"
+            ></div>
+          </div>
+
+
+          <div class="form-field full-column">
+            <label for="details">
+              รายละเอียดการกระทำที่ไม่ปลอดภัย
+              <span class="required">*</span>
+            </label>
+
+            <textarea
+              id="details"
+              name="details"
+              rows="5"
+              maxlength="2000"
+              placeholder="ระบุพฤติกรรมที่พบ จุดเกิดเหตุ และความเสี่ยงที่อาจเกิดขึ้น"
+              required
+            ></textarea>
+
+            <div class="textarea-footer">
+              <div
+                class="field-error"
+                data-error-for="details"
+              ></div>
+
+              <span id="detailsCount">
+                0/2000
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <section class="card">
+        <div class="section-heading">
+          <div>
+            <h2>
+              ภาพหรือวิดีโอหลักฐาน
+            </h2>
+
+            <p>
+              เลือกได้สูงสุด 3 ไฟล์
+            </p>
+          </div>
+
+          <span
+            id="fileCounter"
+            class="counter-badge"
+          >
+            0/3
+          </span>
+        </div>
+
+        <div class="evidence-grid">
+          <article
+            class="evidence-slot"
+            data-slot="0"
+          >
+            <div class="slot-title">
+              หลักฐาน 1
+            </div>
+
+            <label
+              class="file-picker"
+              for="evidenceFile1"
+            >
+              <span class="picker-icon">
+                +
+              </span>
+
+              <span>
+                เลือกภาพหรือวิดีโอ
+              </span>
+            </label>
+
+            <input
+              id="evidenceFile1"
+              class="file-input"
+              data-index="0"
+              type="file"
+              accept="image/*,video/*"
+            >
+
+            <div
+              class="file-preview hidden"
+              data-preview="0"
+            ></div>
+          </article>
+
+
+          <article
+            class="evidence-slot"
+            data-slot="1"
+          >
+            <div class="slot-title">
+              หลักฐาน 2
+            </div>
+
+            <label
+              class="file-picker"
+              for="evidenceFile2"
+            >
+              <span class="picker-icon">
+                +
+              </span>
+
+              <span>
+                เลือกภาพหรือวิดีโอ
+              </span>
+            </label>
+
+            <input
+              id="evidenceFile2"
+              class="file-input"
+              data-index="1"
+              type="file"
+              accept="image/*,video/*"
+            >
+
+            <div
+              class="file-preview hidden"
+              data-preview="1"
+            ></div>
+          </article>
+
+
+          <article
+            class="evidence-slot"
+            data-slot="2"
+          >
+            <div class="slot-title">
+              หลักฐาน 3
+            </div>
+
+            <label
+              class="file-picker"
+              for="evidenceFile3"
+            >
+              <span class="picker-icon">
+                +
+              </span>
+
+              <span>
+                เลือกภาพหรือวิดีโอ
+              </span>
+            </label>
+
+            <input
+              id="evidenceFile3"
+              class="file-input"
+              data-index="2"
+              type="file"
+              accept="image/*,video/*"
+            >
+
+            <div
+              class="file-preview hidden"
+              data-preview="2"
+            ></div>
+          </article>
+        </div>
+
+        <div
+          id="fileError"
+          class="field-error evidence-error"
+        ></div>
+      </section>
+
+
+      <section
+        id="validationResult"
+        class="card result-card hidden"
+      >
+        <div class="section-heading">
+          <div>
+            <h2>
+              ผลการตรวจสอบข้อมูล
+            </h2>
+
+            <p>
+              รอบนี้ยังไม่ส่งข้อมูลจริง
+            </p>
+          </div>
+        </div>
+
+        <div
+          id="validationResultContent"
+          class="result-content"
+        ></div>
+      </section>
+
+
+      <div class="submit-area">
+        <button
+          id="validateButton"
+          class="button button-primary button-large"
+          type="submit"
+        >
+          ตรวจสอบข้อมูล
+        </button>
+
+        <div class="submit-note">
+          ระบบบันทึกข้อมูลและอัปโหลดไฟล์จะเชื่อมต่อในรอบถัดไป
+        </div>
+      </div>
+    </form>
+  </main>
+
+
+  <div
+    id="toast"
+    class="toast hidden"
+    role="status"
+  ></div>
+
+
+  <script
+    src="https://static.line-scdn.net/liff/edge/2/sdk.js"
+  ></script>
+
+  <script src="config.js"></script>
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

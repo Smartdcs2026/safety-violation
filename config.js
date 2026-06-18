@@ -8,7 +8,7 @@ window.APP_CONFIG = Object.freeze({
     'ระบบแจ้งการกระทำที่ไม่ปลอดภัย',
 
   API_BASE:
-    'https://safety-violation-api.YOUR-SUBDOMAIN.workers.dev',
+    'https://safety-violation-api.somchaibutphon.workers.dev',
 
   LIFF_ID:
     '',

@@ -29,6 +29,7 @@
 </head>
 
 <body>
+
   <div
     id="loadingOverlay"
     class="loading-overlay"
@@ -47,8 +48,10 @@
 
 
   <main class="app-shell">
+
     <header class="app-header">
       <div class="brand-row">
+
         <div class="logo-box">
           <img
             id="appLogo"
@@ -66,9 +69,12 @@
             บันทึกเหตุการณ์และหลักฐานในพื้นที่ทำงาน
           </p>
         </div>
+
       </div>
 
+
       <div class="status-row">
+
         <span
           id="apiStatus"
           class="status-chip status-waiting"
@@ -89,6 +95,7 @@
         >
           --/--/---- --:--:--
         </span>
+
       </div>
     </header>
 
@@ -115,6 +122,7 @@
 
 
     <section class="card user-card">
+
       <div class="section-heading">
         <div>
           <h2>
@@ -127,7 +135,9 @@
         </div>
       </div>
 
+
       <div class="user-layout">
+
         <div class="avatar-wrap">
           <img
             id="userAvatar"
@@ -137,6 +147,7 @@
         </div>
 
         <div class="user-info">
+
           <div
             id="userDisplayName"
             class="user-name"
@@ -152,6 +163,7 @@
           </div>
 
           <div class="user-status-row">
+
             <span
               id="loginStatus"
               class="status-chip status-neutral"
@@ -165,11 +177,14 @@
             >
               ยังไม่ตรวจสอบเพื่อน
             </span>
+
           </div>
         </div>
       </div>
 
+
       <div class="action-row">
+
         <button
           id="lineLoginButton"
           class="button button-line hidden"
@@ -185,12 +200,15 @@
         >
           เพิ่ม LINE Bot เป็นเพื่อน
         </button>
+
       </div>
+
 
       <div
         id="liffNotice"
         class="inline-notice hidden"
       ></div>
+
     </section>
 
 
@@ -199,7 +217,9 @@
       class="form-stack"
       novalidate
     >
+
       <section class="card">
+
         <div class="section-heading">
           <div>
             <h2>
@@ -212,8 +232,11 @@
           </div>
         </div>
 
+
         <div class="form-grid two-columns">
+
           <div class="form-field">
+
             <label for="workShift">
               กะทำงาน
               <span class="required">*</span>
@@ -233,10 +256,12 @@
               class="field-error"
               data-error-for="workShift"
             ></div>
+
           </div>
 
 
           <div class="form-field">
+
             <label for="osm">
               OSM
               <span class="required">*</span>
@@ -256,10 +281,12 @@
               class="field-error"
               data-error-for="osm"
             ></div>
+
           </div>
 
 
           <div class="form-field full-column">
+
             <label for="otm">
               OTM
               <span class="required">*</span>
@@ -279,10 +306,12 @@
               class="field-error"
               data-error-for="otm"
             ></div>
+
           </div>
 
 
           <div class="form-field full-column">
+
             <label for="details">
               รายละเอียดการกระทำที่ไม่ปลอดภัย
               <span class="required">*</span>
@@ -298,6 +327,7 @@
             ></textarea>
 
             <div class="textarea-footer">
+
               <div
                 class="field-error"
                 data-error-for="details"
@@ -306,21 +336,27 @@
               <span id="detailsCount">
                 0/2000
               </span>
+
             </div>
+
           </div>
+
         </div>
+
       </section>
 
 
       <section class="card">
+
         <div class="section-heading">
+
           <div>
             <h2>
               ภาพหรือวิดีโอหลักฐาน
             </h2>
 
             <p>
-              เลือกได้สูงสุด 3 ไฟล์
+              ต้องมีอย่างน้อย 1 ไฟล์ สูงสุด 3 ไฟล์
             </p>
           </div>
 
@@ -330,13 +366,17 @@
           >
             0/3
           </span>
+
         </div>
 
+
         <div class="evidence-grid">
+
           <article
             class="evidence-slot"
             data-slot="0"
           >
+
             <div class="slot-title">
               หลักฐาน 1
             </div>
@@ -366,6 +406,7 @@
               class="file-preview hidden"
               data-preview="0"
             ></div>
+
           </article>
 
 
@@ -373,6 +414,7 @@
             class="evidence-slot"
             data-slot="1"
           >
+
             <div class="slot-title">
               หลักฐาน 2
             </div>
@@ -402,6 +444,7 @@
               class="file-preview hidden"
               data-preview="1"
             ></div>
+
           </article>
 
 
@@ -409,6 +452,7 @@
             class="evidence-slot"
             data-slot="2"
           >
+
             <div class="slot-title">
               หลักฐาน 3
             </div>
@@ -438,13 +482,58 @@
               class="file-preview hidden"
               data-preview="2"
             ></div>
+
           </article>
+
         </div>
+
 
         <div
           id="fileError"
           class="field-error evidence-error"
         ></div>
+
+      </section>
+
+
+      <section
+        id="saveProgressCard"
+        class="card progress-card hidden"
+      >
+
+        <div class="progress-top">
+
+          <div>
+            <div
+              id="saveProgressText"
+              class="progress-title"
+            >
+              กำลังเตรียมบันทึก
+            </div>
+
+            <div
+              id="saveProgressDetail"
+              class="progress-detail"
+            ></div>
+          </div>
+
+          <div
+            id="saveProgressPercent"
+            class="progress-percent"
+          >
+            0%
+          </div>
+
+        </div>
+
+
+        <div class="progress-track">
+          <div
+            id="saveProgressBar"
+            class="progress-bar"
+          ></div>
+        </div>
+
       </section>
 
 
@@ -452,15 +541,18 @@
         id="validationResult"
         class="card result-card hidden"
       >
+
         <div class="section-heading">
           <div>
-            <h2>
-              ผลการตรวจสอบข้อมูล
+
+            <h2 id="validationResultTitle">
+              ผลการบันทึกข้อมูล
             </h2>
 
-            <p>
-              รอบนี้ยังไม่ส่งข้อมูลจริง
+            <p id="validationResultSubtext">
+              ระบบจะแสดงรหัสปัญหาหลังบันทึกสำเร็จ
             </p>
+
           </div>
         </div>
 
@@ -468,23 +560,28 @@
           id="validationResultContent"
           class="result-content"
         ></div>
+
       </section>
 
 
       <div class="submit-area">
+
         <button
-          id="validateButton"
+          id="submitButton"
           class="button button-primary button-large"
           type="submit"
         >
-          ตรวจสอบข้อมูล
+          บันทึกและส่งข้อมูล
         </button>
 
         <div class="submit-note">
-          ระบบบันทึกข้อมูลและอัปโหลดไฟล์จะเชื่อมต่อในรอบถัดไป
+          กรุณารอจนระบบอัปโหลดหลักฐานครบทุกไฟล์
         </div>
+
       </div>
+
     </form>
+
   </main>
 
 
@@ -502,5 +599,6 @@
   <script src="config.js"></script>
   <script src="api.js"></script>
   <script src="app.js"></script>
+
 </body>
 </html>

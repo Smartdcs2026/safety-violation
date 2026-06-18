@@ -11,7 +11,7 @@ window.APP_CONFIG = Object.freeze({
     'https://safety-violation-api.somchaibutphon.workers.dev',
 
   LIFF_ID:
-    '',
+    '2010443605-jWYyda1e',
 
   LOGO_URL:
     'https://lh5.googleusercontent.com/d/1HicYHV18UaA5y4GFyHJaG9aNI-qjIzIY',
@@ -22,6 +22,12 @@ window.APP_CONFIG = Object.freeze({
   API_TIMEOUT_MS:
     30000,
 
+  SAVE_TIMEOUT_MS:
+    60000,
+
+  UPLOAD_TIMEOUT_MS:
+    120000,
+
   MAX_FILES:
     3,
 
@@ -29,7 +35,7 @@ window.APP_CONFIG = Object.freeze({
     5 * 1024 * 1024,
 
   MAX_VIDEO_BYTES:
-    15 * 1024 * 1024,
+    8 * 1024 * 1024,
 
   ALLOWED_IMAGE_TYPES: [
     'image/jpeg',

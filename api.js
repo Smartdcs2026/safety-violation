@@ -1,6 +1,6 @@
 /**
  * api.js
- * ฟังก์ชันเรียก Cloudflare Worker
+ * ติดต่อ Cloudflare Worker
  */
 
 (function (window) {
@@ -18,6 +18,16 @@
     Number(
       CONFIG.API_TIMEOUT_MS
     ) || 30000;
+
+  const SAVE_TIMEOUT_MS =
+    Number(
+      CONFIG.SAVE_TIMEOUT_MS
+    ) || 60000;
+
+  const UPLOAD_TIMEOUT_MS =
+    Number(
+      CONFIG.UPLOAD_TIMEOUT_MS
+    ) || 120000;
 
 
   class SafetyAPIError extends Error {
@@ -127,7 +137,7 @@
       ) {
         headers.set(
           'Content-Type',
-          'application/json'
+          'application/json; charset=UTF-8'
         );
 
         fetchOptions.body =
@@ -152,11 +162,15 @@
           rawText
             ? JSON.parse(rawText)
             : {};
+
       } catch (error) {
         throw new SafetyAPIError(
           'API ไม่ได้ส่งข้อมูล JSON กลับมา',
+
           'NON_JSON_RESPONSE',
+
           response.status,
+
           {
             preview:
               rawText.slice(
@@ -164,6 +178,7 @@
                 300
               )
           },
+
           response.headers.get(
             'X-Request-ID'
           ) || ''
@@ -176,20 +191,20 @@
       ) {
         throw new SafetyAPIError(
           result.message ||
-            'API ทำงานไม่สำเร็จ',
+          'API ทำงานไม่สำเร็จ',
 
           result.code ||
-            'REQUEST_FAILED',
+          'REQUEST_FAILED',
 
           response.status,
 
           result.details || null,
 
           result.requestId ||
-            response.headers.get(
-              'X-Request-ID'
-            ) ||
-            ''
+          response.headers.get(
+            'X-Request-ID'
+          ) ||
+          ''
         );
       }
 
@@ -199,7 +214,7 @@
       if (
         error &&
         error.name ===
-          'AbortError'
+        'AbortError'
       ) {
         throw new SafetyAPIError(
           'ระบบใช้เวลาตอบกลับนานเกินกำหนด',
@@ -209,7 +224,7 @@
 
       if (
         error instanceof
-          SafetyAPIError
+        SafetyAPIError
       ) {
         throw error;
       }
@@ -224,9 +239,7 @@
       );
 
     } finally {
-      window.clearTimeout(
-        timer
-      );
+      window.clearTimeout(timer);
     }
   }
 
@@ -251,7 +264,8 @@
     return request(
       '/api/auth/verify',
       {
-        method: 'POST',
+        method:
+          'POST',
 
         body: {
           accessToken:
@@ -259,6 +273,63 @@
               accessToken || ''
             )
         }
+      }
+    );
+  }
+
+
+  function startCase(
+    payload
+  ) {
+    return request(
+      '/api/case/start',
+      {
+        method:
+          'POST',
+
+        timeoutMs:
+          SAVE_TIMEOUT_MS,
+
+        body:
+          payload || {}
+      }
+    );
+  }
+
+
+  function uploadCaseFile(
+    payload
+  ) {
+    return request(
+      '/api/case/upload',
+      {
+        method:
+          'POST',
+
+        timeoutMs:
+          UPLOAD_TIMEOUT_MS,
+
+        body:
+          payload || {}
+      }
+    );
+  }
+
+
+  function finalizeCase(
+    payload
+  ) {
+    return request(
+      '/api/case/finalize',
+      {
+        method:
+          'POST',
+
+        timeoutMs:
+          SAVE_TIMEOUT_MS,
+
+        body:
+          payload || {}
       }
     );
   }
@@ -273,6 +344,15 @@
 
     verifyLine:
       verifyLine,
+
+    startCase:
+      startCase,
+
+    uploadCaseFile:
+      uploadCaseFile,
+
+    finalizeCase:
+      finalizeCase,
 
     SafetyAPIError:
       SafetyAPIError

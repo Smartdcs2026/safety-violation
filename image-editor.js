@@ -7,142 +7,89 @@
  * - ลูกศร
  * - สี่เหลี่ยม
  * - วงกลม
- * - เบลอเฉพาะจุด
- * - เลือกสี
- * - ปรับขนาด
- * - ย้อนกลับ
- * - คืนค่าภาพเดิม
+ * - เบลออิสระ
+ * - โมเสกอิสระ
+ * - เบลอสี่เหลี่ยม
+ * - โมเสกสี่เหลี่ยม
+ * - เบลอวงกลม
+ * - โมเสกวงกลม
  ************************************************************/
 
 (function (window, document) {
   'use strict';
 
   const EDITOR_CONFIG = Object.freeze({
-    MAX_CANVAS_DIMENSION:
-      1280,
-
-    MAX_HISTORY:
-      6,
-
-    DEFAULT_TOOL:
-      'draw',
-
-    DEFAULT_COLOR:
-      '#ff0000',
-
-    DEFAULT_SIZE:
-      8,
-
-    OUTPUT_MIME_TYPE:
-      'image/jpeg',
-
-    OUTPUT_QUALITY:
-      0.9
+    MAX_CANVAS_DIMENSION: 1280,
+    MAX_HISTORY: 8,
+    DEFAULT_TOOL: 'draw',
+    DEFAULT_COLOR: '#ff0000',
+    DEFAULT_SIZE: 8,
+    OUTPUT_MIME_TYPE: 'image/jpeg',
+    OUTPUT_QUALITY: 0.92
   });
 
+  const DRAW_TOOLS = Object.freeze([
+    'draw',
+    'arrow',
+    'rectangle',
+    'circle'
+  ]);
+
+  const FREE_EFFECT_TOOLS = Object.freeze([
+    'blurFree',
+    'mosaicFree'
+  ]);
+
+  const SHAPE_EFFECT_TOOLS = Object.freeze([
+    'blurRect',
+    'mosaicRect',
+    'blurCircle',
+    'mosaicCircle'
+  ]);
+
+  const ALL_TOOLS = Object.freeze([
+    ...DRAW_TOOLS,
+    ...FREE_EFFECT_TOOLS,
+    ...SHAPE_EFFECT_TOOLS
+  ]);
 
   const state = {
-    initialized:
-      false,
-
-    opened:
-      false,
-
-    fileIndex:
-      -1,
-
-    originalFile:
-      null,
-
-    originalSnapshot:
-      '',
-
-    history:
-      [],
-
-    tool:
-      EDITOR_CONFIG.DEFAULT_TOOL,
-
-    color:
-      EDITOR_CONFIG.DEFAULT_COLOR,
-
-    size:
-      EDITOR_CONFIG.DEFAULT_SIZE,
-
-    drawing:
-      false,
-
-    startX:
-      0,
-
-    startY:
-      0,
-
-    lastX:
-      0,
-
-    lastY:
-      0,
-
-    activePointerId:
-      null,
-
-    canvas:
-      null,
-
-    context:
-      null,
-
-    sourceCanvas:
-      null,
-
-    sourceContext:
-      null,
-
-    modal:
-      null,
-
-    title:
-      null,
-
-    canvasWrapper:
-      null,
-
-    colorInput:
-      null,
-
-    sizeInput:
-      null,
-
-    sizeValue:
-      null,
-
-    undoButton:
-      null,
-
-    resetButton:
-      null,
-
-    saveButton:
-      null,
-
-    cancelButton:
-      null,
-
-    closeButton:
-      null
+    initialized: false,
+    opened: false,
+    fileIndex: -1,
+    originalFile: null,
+    originalSnapshot: '',
+    history: [],
+    tool: EDITOR_CONFIG.DEFAULT_TOOL,
+    color: EDITOR_CONFIG.DEFAULT_COLOR,
+    size: EDITOR_CONFIG.DEFAULT_SIZE,
+    drawing: false,
+    startX: 0,
+    startY: 0,
+    lastX: 0,
+    lastY: 0,
+    activePointerId: null,
+    canvas: null,
+    context: null,
+    sourceCanvas: null,
+    sourceContext: null,
+    modal: null,
+    title: null,
+    canvasWrapper: null,
+    colorInput: null,
+    sizeInput: null,
+    sizeValue: null,
+    undoButton: null,
+    resetButton: null,
+    saveButton: null,
+    cancelButton: null,
+    closeButton: null
   };
-
 
   document.addEventListener(
     'DOMContentLoaded',
     initializeEditor
   );
-
-
-  /**********************************************************
-   * เริ่มต้นระบบ
-   **********************************************************/
 
   function initializeEditor() {
     if (state.initialized) {
@@ -152,33 +99,17 @@
     createEditorModal();
     cacheEditorElements();
     bindEditorEvents();
-    setActiveTool(
-      EDITOR_CONFIG.DEFAULT_TOOL
-    );
+    setActiveTool(EDITOR_CONFIG.DEFAULT_TOOL);
 
-    state.initialized =
-      true;
+    state.initialized = true;
   }
 
-
-  /**********************************************************
-   * สร้างหน้าต่าง Editor
-   **********************************************************/
-
   function createEditorModal() {
-    const modal =
-      document.createElement(
-        'div'
-      );
+    const modal = document.createElement('div');
 
-    modal.id =
-      'imageEditorModal';
-
-    modal.className =
-      'image-editor-modal';
-
-    modal.hidden =
-      true;
+    modal.id = 'imageEditorModal';
+    modal.className = 'image-editor-modal';
+    modal.hidden = true;
 
     modal.innerHTML = `
       <section
@@ -189,16 +120,10 @@
       >
         <header class="image-editor-header">
           <div>
-            <p class="image-editor-overline">
-              IMAGE EDITOR
-            </p>
-
-            <h2 id="imageEditorTitle">
-              แก้ไขภาพหลักฐาน
-            </h2>
-
+            <p class="image-editor-overline">IMAGE EDITOR</p>
+            <h2 id="imageEditorTitle">แก้ไขภาพหลักฐาน</h2>
             <p class="image-editor-subtitle">
-              วาดเครื่องหมายหรือเบลอเฉพาะจุดก่อนบันทึก
+              วาดเครื่องหมาย, เบลอ หรือโมเสกเฉพาะจุดก่อนบันทึก
             </p>
           </div>
 
@@ -212,89 +137,49 @@
           </button>
         </header>
 
-
         <div class="image-editor-toolbar">
           <div class="editor-tool-group">
-            <span class="editor-tool-label">
-              เครื่องมือ
-            </span>
+            <span class="editor-tool-label">เครื่องมือ</span>
 
             <div class="editor-tool-buttons">
-              <button
-                type="button"
-                class="editor-tool-button"
-                data-editor-tool="draw"
-              >
-                วาดเส้น
-              </button>
+              <button type="button" class="editor-tool-button" data-editor-tool="draw">วาดเส้น</button>
+              <button type="button" class="editor-tool-button" data-editor-tool="arrow">ลูกศร</button>
+              <button type="button" class="editor-tool-button" data-editor-tool="rectangle">สี่เหลี่ยม</button>
+              <button type="button" class="editor-tool-button" data-editor-tool="circle">วงกลม</button>
 
-              <button
-                type="button"
-                class="editor-tool-button"
-                data-editor-tool="arrow"
-              >
-                ลูกศร
-              </button>
+              <button type="button" class="editor-tool-button" data-editor-tool="blurFree">เบลออิสระ</button>
+              <button type="button" class="editor-tool-button" data-editor-tool="mosaicFree">โมเสกอิสระ</button>
 
-              <button
-                type="button"
-                class="editor-tool-button"
-                data-editor-tool="rectangle"
-              >
-                สี่เหลี่ยม
-              </button>
+              <button type="button" class="editor-tool-button" data-editor-tool="blurRect">เบลอสี่เหลี่ยม</button>
+              <button type="button" class="editor-tool-button" data-editor-tool="mosaicRect">โมเสกสี่เหลี่ยม</button>
 
-              <button
-                type="button"
-                class="editor-tool-button"
-                data-editor-tool="circle"
-              >
-                วงกลม
-              </button>
-
-              <button
-                type="button"
-                class="editor-tool-button"
-                data-editor-tool="blur"
-              >
-                เบลอ
-              </button>
+              <button type="button" class="editor-tool-button" data-editor-tool="blurCircle">เบลอวงกลม</button>
+              <button type="button" class="editor-tool-button" data-editor-tool="mosaicCircle">โมเสกวงกลม</button>
             </div>
           </div>
 
-
           <div class="editor-setting-grid">
             <label class="editor-setting">
-              <span>
-                สี
-              </span>
-
-              <input
-                id="imageEditorColor"
-                type="color"
-                value="#ff0000"
-              >
+              <span>สี</span>
+              <input id="imageEditorColor" type="color" value="#ff0000">
             </label>
 
             <label class="editor-setting editor-size-setting">
               <span>
                 ขนาด
-                <strong id="imageEditorSizeValue">
-                  8
-                </strong>
+                <strong id="imageEditorSizeValue">8</strong>
               </span>
 
               <input
                 id="imageEditorSize"
                 type="range"
                 min="2"
-                max="40"
+                max="48"
                 step="1"
                 value="8"
               >
             </label>
           </div>
-
 
           <div class="editor-history-actions">
             <button
@@ -315,7 +200,6 @@
           </div>
         </div>
 
-
         <div
           id="imageEditorCanvasWrapper"
           class="image-editor-canvas-wrapper"
@@ -325,7 +209,6 @@
             class="image-editor-canvas"
           ></canvas>
         </div>
-
 
         <footer class="image-editor-footer">
           <button
@@ -347,722 +230,351 @@
       </section>
     `;
 
-    document.body.appendChild(
-      modal
-    );
+    document.body.appendChild(modal);
   }
-
 
   function cacheEditorElements() {
-    state.modal =
-      document.getElementById(
-        'imageEditorModal'
-      );
+    state.modal = document.getElementById('imageEditorModal');
+    state.title = document.getElementById('imageEditorTitle');
+    state.canvas = document.getElementById('imageEditorCanvas');
+    state.context = state.canvas.getContext('2d', { willReadFrequently: true });
 
-    state.title =
-      document.getElementById(
-        'imageEditorTitle'
-      );
+    state.sourceCanvas = document.createElement('canvas');
+    state.sourceContext = state.sourceCanvas.getContext('2d', { willReadFrequently: true });
 
-    state.canvas =
-      document.getElementById(
-        'imageEditorCanvas'
-      );
-
-    state.context =
-      state.canvas.getContext(
-        '2d',
-        {
-          willReadFrequently:
-            true
-        }
-      );
-
-    state.sourceCanvas =
-      document.createElement(
-        'canvas'
-      );
-
-    state.sourceContext =
-      state.sourceCanvas.getContext(
-        '2d',
-        {
-          willReadFrequently:
-            true
-        }
-      );
-
-    state.canvasWrapper =
-      document.getElementById(
-        'imageEditorCanvasWrapper'
-      );
-
-    state.colorInput =
-      document.getElementById(
-        'imageEditorColor'
-      );
-
-    state.sizeInput =
-      document.getElementById(
-        'imageEditorSize'
-      );
-
-    state.sizeValue =
-      document.getElementById(
-        'imageEditorSizeValue'
-      );
-
-    state.undoButton =
-      document.getElementById(
-        'imageEditorUndoButton'
-      );
-
-    state.resetButton =
-      document.getElementById(
-        'imageEditorResetButton'
-      );
-
-    state.saveButton =
-      document.getElementById(
-        'imageEditorSaveButton'
-      );
-
-    state.cancelButton =
-      document.getElementById(
-        'imageEditorCancelButton'
-      );
-
-    state.closeButton =
-      document.getElementById(
-        'imageEditorCloseButton'
-      );
+    state.canvasWrapper = document.getElementById('imageEditorCanvasWrapper');
+    state.colorInput = document.getElementById('imageEditorColor');
+    state.sizeInput = document.getElementById('imageEditorSize');
+    state.sizeValue = document.getElementById('imageEditorSizeValue');
+    state.undoButton = document.getElementById('imageEditorUndoButton');
+    state.resetButton = document.getElementById('imageEditorResetButton');
+    state.saveButton = document.getElementById('imageEditorSaveButton');
+    state.cancelButton = document.getElementById('imageEditorCancelButton');
+    state.closeButton = document.getElementById('imageEditorCloseButton');
   }
-
-
-  /**********************************************************
-   * Event
-   **********************************************************/
 
   function bindEditorEvents() {
-    document.addEventListener(
-      'click',
-      handleDocumentClick
-    );
+    document.addEventListener('click', handleDocumentClick);
 
-    state.colorInput.addEventListener(
-      'input',
-      function () {
-        state.color =
-          state.colorInput.value ||
-          EDITOR_CONFIG.DEFAULT_COLOR;
+    state.colorInput.addEventListener('input', function () {
+      state.color = state.colorInput.value || EDITOR_CONFIG.DEFAULT_COLOR;
+    });
+
+    state.sizeInput.addEventListener('input', function () {
+      state.size =
+        Number(state.sizeInput.value) || EDITOR_CONFIG.DEFAULT_SIZE;
+
+      state.sizeValue.textContent = String(state.size);
+    });
+
+    state.undoButton.addEventListener('click', undoLastAction);
+    state.resetButton.addEventListener('click', resetToOriginal);
+    state.saveButton.addEventListener('click', saveEditedImage);
+    state.cancelButton.addEventListener('click', closeEditor);
+    state.closeButton.addEventListener('click', closeEditor);
+
+    state.modal.addEventListener('click', function (event) {
+      if (event.target === state.modal) {
+        closeEditor();
       }
-    );
+    });
 
-    state.sizeInput.addEventListener(
-      'input',
-      function () {
-        state.size =
-          Number(
-            state.sizeInput.value
-          ) ||
-          EDITOR_CONFIG.DEFAULT_SIZE;
+    state.canvas.addEventListener('pointerdown', handlePointerDown);
+    state.canvas.addEventListener('pointermove', handlePointerMove);
+    state.canvas.addEventListener('pointerup', handlePointerUp);
+    state.canvas.addEventListener('pointercancel', handlePointerCancel);
 
-        state.sizeValue.textContent =
-          String(
-            state.size
-          );
-      }
-    );
+    state.canvas.addEventListener('contextmenu', function (event) {
+      event.preventDefault();
+    });
 
-    state.undoButton.addEventListener(
-      'click',
-      undoLastAction
-    );
-
-    state.resetButton.addEventListener(
-      'click',
-      resetToOriginal
-    );
-
-    state.saveButton.addEventListener(
-      'click',
-      saveEditedImage
-    );
-
-    state.cancelButton.addEventListener(
-      'click',
-      closeEditor
-    );
-
-    state.closeButton.addEventListener(
-      'click',
-      closeEditor
-    );
-
-    state.modal.addEventListener(
-      'click',
-      function (event) {
-        if (
-          event.target === state.modal
-        ) {
-          closeEditor();
-        }
-      }
-    );
-
-    state.canvas.addEventListener(
-      'pointerdown',
-      handlePointerDown
-    );
-
-    state.canvas.addEventListener(
-      'pointermove',
-      handlePointerMove
-    );
-
-    state.canvas.addEventListener(
-      'pointerup',
-      handlePointerUp
-    );
-
-    state.canvas.addEventListener(
-      'pointercancel',
-      handlePointerCancel
-    );
-
-    state.canvas.addEventListener(
-      'contextmenu',
-      function (event) {
-        event.preventDefault();
-      }
-    );
-
-    window.addEventListener(
-      'keydown',
-      handleKeyboard
-    );
+    window.addEventListener('keydown', handleKeyboard);
   }
 
-
-  function handleDocumentClick(
-    event
-  ) {
-    const toolButton =
-      event.target.closest(
-        '[data-editor-tool]'
-      );
+  function handleDocumentClick(event) {
+    const toolButton = event.target.closest('[data-editor-tool]');
 
     if (toolButton) {
-      setActiveTool(
-        toolButton.dataset.editorTool
-      );
-
+      setActiveTool(toolButton.dataset.editorTool);
       return;
     }
 
-    const editButton =
-      event.target.closest(
-        '[data-edit-index]'
-      );
+    const editButton = event.target.closest('[data-edit-index]');
 
     if (!editButton) {
       return;
     }
 
-    const index =
-      Number(
-        editButton.dataset.editIndex
-      );
+    const index = Number(editButton.dataset.editIndex);
 
-    openEditor(
-      index
-    );
+    openEditor(index);
   }
 
-
-  function handleKeyboard(
-    event
-  ) {
+  function handleKeyboard(event) {
     if (!state.opened) {
       return;
     }
 
-    if (
-      event.key === 'Escape'
-    ) {
+    if (event.key === 'Escape') {
       closeEditor();
       return;
     }
 
     if (
-      (
-        event.ctrlKey ||
-        event.metaKey
-      ) &&
-      String(
-        event.key
-      ).toLowerCase() === 'z'
+      (event.ctrlKey || event.metaKey) &&
+      String(event.key).toLowerCase() === 'z'
     ) {
       event.preventDefault();
       undoLastAction();
     }
   }
 
-
-  /**********************************************************
-   * เปิด Editor
-   **********************************************************/
-
-  async function openEditor(
-    fileIndex
-  ) {
+  async function openEditor(fileIndex) {
     try {
       if (
         !window.SafetyApp ||
-        typeof window.SafetyApp
-          .getEvidenceFile !==
-          'function'
+        typeof window.SafetyApp.getEvidenceFile !== 'function'
       ) {
-        throw new Error(
-          'ไม่พบระบบจัดการไฟล์หลักฐาน'
-        );
+        throw new Error('ไม่พบระบบจัดการไฟล์หลักฐาน');
       }
 
-      const file =
-        window.SafetyApp
-          .getEvidenceFile(
-            fileIndex
-          );
+      const file = window.SafetyApp.getEvidenceFile(fileIndex);
 
       if (
         !file ||
-        !String(
-          file.type || ''
-        ).startsWith(
-          'image/'
-        )
+        !String(file.type || '').startsWith('image/')
       ) {
-        throw new Error(
-          'ไฟล์นี้ไม่ใช่ไฟล์ภาพ'
-        );
+        throw new Error('ไฟล์นี้ไม่ใช่ไฟล์ภาพ');
       }
 
-      state.fileIndex =
-        fileIndex;
+      state.fileIndex = fileIndex;
+      state.originalFile = file;
+      state.history = [];
+      state.tool = EDITOR_CONFIG.DEFAULT_TOOL;
+      state.color = EDITOR_CONFIG.DEFAULT_COLOR;
+      state.size = EDITOR_CONFIG.DEFAULT_SIZE;
 
-      state.originalFile =
-        file;
+      state.colorInput.value = state.color;
+      state.sizeInput.value = String(state.size);
+      state.sizeValue.textContent = String(state.size);
 
-      state.history =
-        [];
-
-      state.tool =
-        EDITOR_CONFIG.DEFAULT_TOOL;
-
-      state.color =
-        EDITOR_CONFIG.DEFAULT_COLOR;
-
-      state.size =
-        EDITOR_CONFIG.DEFAULT_SIZE;
-
-      state.colorInput.value =
-        state.color;
-
-      state.sizeInput.value =
-        String(
-          state.size
-        );
-
-      state.sizeValue.textContent =
-        String(
-          state.size
-        );
-
-      setActiveTool(
-        state.tool
-      );
+      setActiveTool(state.tool);
 
       state.title.textContent =
-        'แก้ไขภาพหลักฐาน ' +
-        (
-          fileIndex + 1
-        );
+        'แก้ไขภาพหลักฐาน ' + (fileIndex + 1);
 
-      setEditorBusy(
-        true,
-        'กำลังเปิดภาพ'
-      );
+      setEditorBusy(true, 'กำลังเปิดภาพ');
 
-      state.modal.hidden =
-        false;
+      state.modal.hidden = false;
+      state.opened = true;
 
-      state.opened =
-        true;
+      document.body.classList.add('image-editor-open');
 
-      document.body.classList.add(
-        'image-editor-open'
-      );
+      const image = await loadImageFile(file);
 
-      const image =
-        await loadImageFile(
-          file
-        );
+      drawInitialImage(image);
 
-      drawInitialImage(
-        image
-      );
-
-      state.originalSnapshot =
-        createCanvasSnapshot();
-
-      state.history = [
-        state.originalSnapshot
-      ];
+      state.originalSnapshot = createCanvasSnapshot();
+      state.history = [state.originalSnapshot];
 
       updateUndoButton();
 
-      state.canvasWrapper.scrollTop =
-        0;
-
-      state.canvasWrapper.scrollLeft =
-        0;
-
+      state.canvasWrapper.scrollTop = 0;
+      state.canvasWrapper.scrollLeft = 0;
     } catch (error) {
       console.error(error);
-
       window.alert(
-        error.message ||
-        'ไม่สามารถเปิดภาพเพื่อแก้ไขได้'
+        error.message || 'ไม่สามารถเปิดภาพเพื่อแก้ไขได้'
       );
-
       closeEditor();
-
     } finally {
-      setEditorBusy(
-        false
-      );
+      setEditorBusy(false);
     }
   }
 
+  function loadImageFile(file) {
+    return new Promise(function (resolve, reject) {
+      const objectUrl = URL.createObjectURL(file);
+      const image = new Image();
 
-  function loadImageFile(
-    file
-  ) {
-    return new Promise(
-      function (
-        resolve,
-        reject
-      ) {
-        const objectUrl =
-          URL.createObjectURL(
-            file
-          );
+      image.onload = function () {
+        URL.revokeObjectURL(objectUrl);
+        resolve(image);
+      };
 
-        const image =
-          new Image();
+      image.onerror = function () {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error('ไม่สามารถอ่านไฟล์ภาพได้'));
+      };
 
-        image.onload =
-          function () {
-            URL.revokeObjectURL(
-              objectUrl
-            );
-
-            resolve(
-              image
-            );
-          };
-
-        image.onerror =
-          function () {
-            URL.revokeObjectURL(
-              objectUrl
-            );
-
-            reject(
-              new Error(
-                'ไม่สามารถอ่านไฟล์ภาพได้'
-              )
-            );
-          };
-
-        image.src =
-          objectUrl;
-      }
-    );
+      image.src = objectUrl;
+    });
   }
 
-
-  function drawInitialImage(
-    image
-  ) {
+  function drawInitialImage(image) {
     const naturalWidth =
-      Math.max(
-        Number(
-          image.naturalWidth
-        ) || 1,
-        1
-      );
+      Math.max(Number(image.naturalWidth) || 1, 1);
 
     const naturalHeight =
-      Math.max(
-        Number(
-          image.naturalHeight
-        ) || 1,
-        1
-      );
+      Math.max(Number(image.naturalHeight) || 1, 1);
 
     const maximumDimension =
-      EDITOR_CONFIG
-        .MAX_CANVAS_DIMENSION;
+      EDITOR_CONFIG.MAX_CANVAS_DIMENSION;
 
-    const scale =
-      Math.min(
-        1,
-        maximumDimension /
-        Math.max(
-          naturalWidth,
-          naturalHeight
-        )
-      );
-
-    const width =
-      Math.max(
-        Math.round(
-          naturalWidth *
-          scale
-        ),
-        1
-      );
-
-    const height =
-      Math.max(
-        Math.round(
-          naturalHeight *
-          scale
-        ),
-        1
-      );
-
-    state.canvas.width =
-      width;
-
-    state.canvas.height =
-      height;
-
-    state.sourceCanvas.width =
-      width;
-
-    state.sourceCanvas.height =
-      height;
-
-    state.context.clearRect(
-      0,
-      0,
-      width,
-      height
+    const scale = Math.min(
+      1,
+      maximumDimension / Math.max(naturalWidth, naturalHeight)
     );
 
-    state.context.drawImage(
-      image,
-      0,
-      0,
-      width,
-      height
-    );
+    const width = Math.max(Math.round(naturalWidth * scale), 1);
+    const height = Math.max(Math.round(naturalHeight * scale), 1);
+
+    state.canvas.width = width;
+    state.canvas.height = height;
+
+    state.sourceCanvas.width = width;
+    state.sourceCanvas.height = height;
+
+    state.context.clearRect(0, 0, width, height);
+    state.context.drawImage(image, 0, 0, width, height);
   }
 
-
-  /**********************************************************
-   * เลือกเครื่องมือ
-   **********************************************************/
-
-  function setActiveTool(
-    tool
-  ) {
-    const allowedTools = [
-      'draw',
-      'arrow',
-      'rectangle',
-      'circle',
-      'blur'
-    ];
-
-    state.tool =
-      allowedTools.includes(
-        tool
-      )
-        ? tool
-        : EDITOR_CONFIG.DEFAULT_TOOL;
+  function setActiveTool(tool) {
+    state.tool = ALL_TOOLS.includes(tool)
+      ? tool
+      : EDITOR_CONFIG.DEFAULT_TOOL;
 
     document
-      .querySelectorAll(
-        '[data-editor-tool]'
-      )
-      .forEach(
-        function (button) {
-          button.classList.toggle(
-            'is-active',
-            button.dataset.editorTool ===
-              state.tool
-          );
-        }
-      );
+      .querySelectorAll('[data-editor-tool]')
+      .forEach(function (button) {
+        button.classList.toggle(
+          'is-active',
+          button.dataset.editorTool === state.tool
+        );
+      });
 
     state.canvas.classList.toggle(
       'is-blur-tool',
-      state.tool === 'blur'
+      isEffectTool(state.tool)
     );
 
     state.colorInput.disabled =
-      state.tool === 'blur';
+      FREE_EFFECT_TOOLS.includes(state.tool) ||
+      SHAPE_EFFECT_TOOLS.includes(state.tool);
   }
 
+  function isEffectTool(tool) {
+    return (
+      FREE_EFFECT_TOOLS.includes(tool) ||
+      SHAPE_EFFECT_TOOLS.includes(tool)
+    );
+  }
 
-  /**********************************************************
-   * Pointer
-   **********************************************************/
-
-  function handlePointerDown(
-    event
-  ) {
-    if (
-      !state.opened ||
-      state.drawing
-    ) {
+  function handlePointerDown(event) {
+    if (!state.opened || state.drawing) {
       return;
     }
 
     event.preventDefault();
 
-    const point =
-      getCanvasPoint(
-        event
-      );
+    const point = getCanvasPoint(event);
 
-    state.drawing =
-      true;
-
-    state.activePointerId =
-      event.pointerId;
-
-    state.startX =
-      point.x;
-
-    state.startY =
-      point.y;
-
-    state.lastX =
-      point.x;
-
-    state.lastY =
-      point.y;
+    state.drawing = true;
+    state.activePointerId = event.pointerId;
+    state.startX = point.x;
+    state.startY = point.y;
+    state.lastX = point.x;
+    state.lastY = point.y;
 
     copyCurrentCanvasToSource();
 
     try {
-      state.canvas.setPointerCapture(
-        event.pointerId
-      );
-    } catch (error) {
-      // บาง Browser ไม่รองรับ
+      state.canvas.setPointerCapture(event.pointerId);
+    } catch (error) {}
+
+    if (state.tool === 'draw') {
+      beginFreehandStroke(point);
+      return;
     }
 
-    if (
-      state.tool === 'draw'
-    ) {
-      beginFreehandStroke(
-        point
-      );
+    if (state.tool === 'blurFree') {
+      applyBlurBrush(point.x, point.y);
+      return;
+    }
 
-    } else if (
-      state.tool === 'blur'
+    if (state.tool === 'mosaicFree') {
+      applyMosaicBrush(point.x, point.y);
+    }
+  }
+
+  function handlePointerMove(event) {
+    if (
+      !state.drawing ||
+      event.pointerId !== state.activePointerId
     ) {
-      applyBlurBrush(
+      return;
+    }
+
+    event.preventDefault();
+
+    const point = getCanvasPoint(event);
+
+    if (state.tool === 'draw') {
+      continueFreehandStroke(point);
+    } else if (state.tool === 'blurFree') {
+      applyBlurAlongLine(
+        state.lastX,
+        state.lastY,
         point.x,
         point.y
       );
+    } else if (state.tool === 'mosaicFree') {
+      applyMosaicAlongLine(
+        state.lastX,
+        state.lastY,
+        point.x,
+        point.y
+      );
+    } else if (
+      DRAW_TOOLS.includes(state.tool) &&
+      state.tool !== 'draw'
+    ) {
+      drawShapePreview(point);
+    } else if (SHAPE_EFFECT_TOOLS.includes(state.tool)) {
+      drawEffectShapePreview(point);
     }
+
+    state.lastX = point.x;
+    state.lastY = point.y;
   }
 
-
-  function handlePointerMove(
-    event
-  ) {
+  function handlePointerUp(event) {
     if (
       !state.drawing ||
-      event.pointerId !==
-        state.activePointerId
+      event.pointerId !== state.activePointerId
     ) {
       return;
     }
 
     event.preventDefault();
 
-    const point =
-      getCanvasPoint(
-        event
-      );
-
-    switch (
-      state.tool
-    ) {
-      case 'draw':
-        continueFreehandStroke(
-          point
-        );
-        break;
-
-      case 'blur':
-        applyBlurAlongLine(
-          state.lastX,
-          state.lastY,
-          point.x,
-          point.y
-        );
-        break;
-
-      case 'arrow':
-      case 'rectangle':
-      case 'circle':
-        drawShapePreview(
-          point
-        );
-        break;
-    }
-
-    state.lastX =
-      point.x;
-
-    state.lastY =
-      point.y;
-  }
-
-
-  function handlePointerUp(
-    event
-  ) {
-    if (
-      !state.drawing ||
-      event.pointerId !==
-        state.activePointerId
-    ) {
-      return;
-    }
-
-    event.preventDefault();
-
-    const point =
-      getCanvasPoint(
-        event
-      );
+    const point = getCanvasPoint(event);
 
     if (
-      state.tool === 'arrow' ||
-      state.tool === 'rectangle' ||
-      state.tool === 'circle'
+      DRAW_TOOLS.includes(state.tool) &&
+      state.tool !== 'draw'
     ) {
       restoreCanvasFromSource();
       drawSelectedShape(
+        state.startX,
+        state.startY,
+        point.x,
+        point.y
+      );
+    } else if (SHAPE_EFFECT_TOOLS.includes(state.tool)) {
+      restoreCanvasFromSource();
+      applyEffectShape(
+        state.tool,
         state.startX,
         state.startY,
         point.x,
@@ -1073,162 +585,69 @@
     finishDrawing();
   }
 
-
-  function handlePointerCancel(
-    event
-  ) {
+  function handlePointerCancel(event) {
     if (
       !state.drawing ||
-      event.pointerId !==
-        state.activePointerId
+      event.pointerId !== state.activePointerId
     ) {
       return;
     }
 
     restoreCanvasFromSource();
 
-    state.drawing =
-      false;
-
-    state.activePointerId =
-      null;
+    state.drawing = false;
+    state.activePointerId = null;
   }
 
-
   function finishDrawing() {
-    state.drawing =
-      false;
-
-    state.activePointerId =
-      null;
-
+    state.drawing = false;
+    state.activePointerId = null;
     pushHistory();
   }
 
+  function getCanvasPoint(event) {
+    const rectangle = state.canvas.getBoundingClientRect();
 
-  function getCanvasPoint(
-    event
-  ) {
-    const rectangle =
-      state.canvas
-        .getBoundingClientRect();
-
-    const scaleX =
-      state.canvas.width /
-      rectangle.width;
-
-    const scaleY =
-      state.canvas.height /
-      rectangle.height;
+    const scaleX = state.canvas.width / rectangle.width;
+    const scaleY = state.canvas.height / rectangle.height;
 
     return {
-      x:
-        (
-          event.clientX -
-          rectangle.left
-        ) *
-        scaleX,
-
-      y:
-        (
-          event.clientY -
-          rectangle.top
-        ) *
-        scaleY
+      x: (event.clientX - rectangle.left) * scaleX,
+      y: (event.clientY - rectangle.top) * scaleY
     };
   }
 
-
-  /**********************************************************
-   * วาดเส้น
-   **********************************************************/
-
-  function beginFreehandStroke(
-    point
-  ) {
-    const context =
-      state.context;
+  function beginFreehandStroke(point) {
+    const context = state.context;
 
     context.save();
-
     context.beginPath();
-
-    context.moveTo(
-      point.x,
-      point.y
-    );
-
-    context.lineWidth =
-      state.size;
-
-    context.lineCap =
-      'round';
-
-    context.lineJoin =
-      'round';
-
-    context.strokeStyle =
-      state.color;
-
-    /*
-     * ทำจุดเริ่มต้นให้มองเห็น
-     */
-    context.lineTo(
-      point.x + 0.01,
-      point.y + 0.01
-    );
-
+    context.moveTo(point.x, point.y);
+    context.lineWidth = state.size;
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
+    context.strokeStyle = state.color;
+    context.lineTo(point.x + 0.01, point.y + 0.01);
     context.stroke();
-
     context.restore();
   }
 
-
-  function continueFreehandStroke(
-    point
-  ) {
-    const context =
-      state.context;
+  function continueFreehandStroke(point) {
+    const context = state.context;
 
     context.save();
-
     context.beginPath();
-
-    context.moveTo(
-      state.lastX,
-      state.lastY
-    );
-
-    context.lineTo(
-      point.x,
-      point.y
-    );
-
-    context.lineWidth =
-      state.size;
-
-    context.lineCap =
-      'round';
-
-    context.lineJoin =
-      'round';
-
-    context.strokeStyle =
-      state.color;
-
+    context.moveTo(state.lastX, state.lastY);
+    context.lineTo(point.x, point.y);
+    context.lineWidth = state.size;
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
+    context.strokeStyle = state.color;
     context.stroke();
-
     context.restore();
   }
 
-
-  /**********************************************************
-   * รูปร่าง
-   **********************************************************/
-
-  function drawShapePreview(
-    point
-  ) {
+  function drawShapePreview(point) {
     restoreCanvasFromSource();
 
     drawSelectedShape(
@@ -1239,366 +658,420 @@
     );
   }
 
+  function drawEffectShapePreview(point) {
+    restoreCanvasFromSource();
 
-  function drawSelectedShape(
-    startX,
-    startY,
-    endX,
-    endY
-  ) {
-    switch (
-      state.tool
-    ) {
+    applyEffectShape(
+      state.tool,
+      state.startX,
+      state.startY,
+      point.x,
+      point.y
+    );
+  }
+
+  function drawSelectedShape(startX, startY, endX, endY) {
+    switch (state.tool) {
       case 'arrow':
-        drawArrow(
-          startX,
-          startY,
-          endX,
-          endY
-        );
+        drawArrow(startX, startY, endX, endY);
         break;
 
       case 'rectangle':
-        drawRectangle(
-          startX,
-          startY,
-          endX,
-          endY
-        );
+        drawRectangle(startX, startY, endX, endY);
         break;
 
       case 'circle':
-        drawCircle(
-          startX,
-          startY,
-          endX,
-          endY
-        );
+        drawCircle(startX, startY, endX, endY);
         break;
     }
   }
 
-
   function prepareShapeContext() {
-    const context =
-      state.context;
+    const context = state.context;
 
-    context.lineWidth =
-      state.size;
-
-    context.lineCap =
-      'round';
-
-    context.lineJoin =
-      'round';
-
-    context.strokeStyle =
-      state.color;
-
-    context.fillStyle =
-      state.color;
+    context.lineWidth = state.size;
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
+    context.strokeStyle = state.color;
+    context.fillStyle = state.color;
 
     return context;
   }
 
+  function drawArrow(startX, startY, endX, endY) {
+    const context = prepareShapeContext();
 
-  function drawArrow(
-    startX,
-    startY,
-    endX,
-    endY
-  ) {
-    const context =
-      prepareShapeContext();
+    const angle = Math.atan2(
+      endY - startY,
+      endX - startX
+    );
 
-    const angle =
-      Math.atan2(
-        endY - startY,
-        endX - startX
-      );
-
-    const headLength =
-      Math.max(
-        14,
-        state.size * 3.2
-      );
+    const headLength = Math.max(14, state.size * 3.2);
 
     context.save();
 
     context.beginPath();
-
-    context.moveTo(
-      startX,
-      startY
-    );
-
-    context.lineTo(
-      endX,
-      endY
-    );
-
+    context.moveTo(startX, startY);
+    context.lineTo(endX, endY);
     context.stroke();
 
     context.beginPath();
-
-    context.moveTo(
-      endX,
-      endY
-    );
-
+    context.moveTo(endX, endY);
     context.lineTo(
-      endX -
-        headLength *
-        Math.cos(
-          angle -
-          Math.PI / 6
-        ),
-      endY -
-        headLength *
-        Math.sin(
-          angle -
-          Math.PI / 6
-        )
+      endX - headLength * Math.cos(angle - Math.PI / 6),
+      endY - headLength * Math.sin(angle - Math.PI / 6)
     );
-
     context.lineTo(
-      endX -
-        headLength *
-        Math.cos(
-          angle +
-          Math.PI / 6
-        ),
-      endY -
-        headLength *
-        Math.sin(
-          angle +
-          Math.PI / 6
-        )
+      endX - headLength * Math.cos(angle + Math.PI / 6),
+      endY - headLength * Math.sin(angle + Math.PI / 6)
     );
-
     context.closePath();
-
     context.fill();
 
     context.restore();
   }
 
-
-  function drawRectangle(
-    startX,
-    startY,
-    endX,
-    endY
-  ) {
-    const context =
-      prepareShapeContext();
+  function drawRectangle(startX, startY, endX, endY) {
+    const context = prepareShapeContext();
 
     context.save();
-
     context.strokeRect(
       startX,
       startY,
       endX - startX,
       endY - startY
     );
-
     context.restore();
   }
 
+  function drawCircle(startX, startY, endX, endY) {
+    const context = prepareShapeContext();
 
-  function drawCircle(
-    startX,
-    startY,
-    endX,
-    endY
-  ) {
-    const context =
-      prepareShapeContext();
-
-    const centerX =
-      (
-        startX +
-        endX
-      ) /
-      2;
-
-    const centerY =
-      (
-        startY +
-        endY
-      ) /
-      2;
-
-    const radiusX =
-      Math.abs(
-        endX -
-        startX
-      ) /
-      2;
-
-    const radiusY =
-      Math.abs(
-        endY -
-        startY
-      ) /
-      2;
+    const centerX = (startX + endX) / 2;
+    const centerY = (startY + endY) / 2;
+    const radiusX = Math.abs(endX - startX) / 2;
+    const radiusY = Math.abs(endY - startY) / 2;
 
     context.save();
-
     context.beginPath();
-
     context.ellipse(
       centerX,
       centerY,
-      Math.max(
-        radiusX,
-        1
-      ),
-      Math.max(
-        radiusY,
-        1
-      ),
+      Math.max(radiusX, 1),
+      Math.max(radiusY, 1),
       0,
       0,
       Math.PI * 2
     );
-
     context.stroke();
-
     context.restore();
   }
 
+  function applyBlurAlongLine(startX, startY, endX, endY) {
+    const distance = Math.hypot(
+      endX - startX,
+      endY - startY
+    );
 
-  /**********************************************************
-   * เบลอ
-   **********************************************************/
+    const brushRadius = getEffectBrushRadius();
+    const step = Math.max(brushRadius / 3, 3);
+    const count = Math.max(Math.ceil(distance / step), 1);
 
-  function applyBlurAlongLine(
-    startX,
-    startY,
-    endX,
-    endY
-  ) {
-    const distance =
-      Math.hypot(
-        endX - startX,
-        endY - startY
-      );
+    for (let index = 0; index <= count; index++) {
+      const ratio = index / count;
 
-    const brushRadius =
-      getBlurBrushRadius();
+      const x = startX + (endX - startX) * ratio;
+      const y = startY + (endY - startY) * ratio;
 
-    const step =
-      Math.max(
-        brushRadius / 3,
-        3
-      );
-
-    const count =
-      Math.max(
-        Math.ceil(
-          distance /
-          step
-        ),
-        1
-      );
-
-    for (
-      let index = 0;
-      index <= count;
-      index++
-    ) {
-      const ratio =
-        index /
-        count;
-
-      const x =
-        startX +
-        (
-          endX -
-          startX
-        ) *
-        ratio;
-
-      const y =
-        startY +
-        (
-          endY -
-          startY
-        ) *
-        ratio;
-
-      applyBlurBrush(
-        x,
-        y
-      );
+      applyBlurBrush(x, y);
     }
   }
 
+  function applyMosaicAlongLine(startX, startY, endX, endY) {
+    const distance = Math.hypot(
+      endX - startX,
+      endY - startY
+    );
 
-  function applyBlurBrush(
-    x,
-    y
-  ) {
-    const context =
-      state.context;
+    const brushRadius = getEffectBrushRadius();
+    const step = Math.max(brushRadius / 3, 3);
+    const count = Math.max(Math.ceil(distance / step), 1);
 
-    const radius =
-      getBlurBrushRadius();
+    for (let index = 0; index <= count; index++) {
+      const ratio = index / count;
 
-    const blurStrength =
-      Math.max(
-        5,
-        state.size * 0.8
-      );
+      const x = startX + (endX - startX) * ratio;
+      const y = startY + (endY - startY) * ratio;
 
-    context.save();
+      applyMosaicBrush(x, y);
+    }
+  }
 
-    context.beginPath();
+  function getEffectBrushRadius() {
+    return Math.max(15, state.size * 2.5);
+  }
 
-    context.arc(
-      x,
-      y,
-      radius,
+  function applyBlurBrush(x, y) {
+    const radius = getEffectBrushRadius();
+
+    state.context.save();
+    state.context.beginPath();
+    state.context.arc(x, y, radius, 0, Math.PI * 2);
+    state.context.clip();
+    state.context.filter =
+      'blur(' + Math.max(5, state.size * 0.8) + 'px)';
+    state.context.drawImage(state.sourceCanvas, 0, 0);
+    state.context.restore();
+  }
+
+  function applyMosaicBrush(x, y) {
+    const radius = getEffectBrushRadius();
+
+    applyMosaicRegion({
+      x: x - radius,
+      y: y - radius,
+      width: radius * 2,
+      height: radius * 2
+    }, {
+      shape: 'circle',
+      cx: x,
+      cy: y,
+      rx: radius,
+      ry: radius
+    });
+  }
+
+  function applyEffectShape(tool, startX, startY, endX, endY) {
+    const bounds = getNormalizedBounds(
+      startX,
+      startY,
+      endX,
+      endY
+    );
+
+    switch (tool) {
+      case 'blurRect':
+        applyBlurRect(bounds);
+        break;
+
+      case 'mosaicRect':
+        applyMosaicRect(bounds);
+        break;
+
+      case 'blurCircle':
+        applyBlurCircle(bounds);
+        break;
+
+      case 'mosaicCircle':
+        applyMosaicCircle(bounds);
+        break;
+    }
+  }
+
+  function applyBlurRect(bounds) {
+    const clipped = clampBoundsToCanvas(bounds);
+
+    if (clipped.width < 1 || clipped.height < 1) {
+      return;
+    }
+
+    state.context.save();
+    state.context.beginPath();
+    state.context.rect(
+      clipped.x,
+      clipped.y,
+      clipped.width,
+      clipped.height
+    );
+    state.context.clip();
+    state.context.filter =
+      'blur(' + Math.max(5, state.size * 0.8) + 'px)';
+    state.context.drawImage(state.sourceCanvas, 0, 0);
+    state.context.restore();
+  }
+
+  function applyBlurCircle(bounds) {
+    const clipped = clampBoundsToCanvas(bounds);
+
+    if (clipped.width < 1 || clipped.height < 1) {
+      return;
+    }
+
+    const cx = clipped.x + clipped.width / 2;
+    const cy = clipped.y + clipped.height / 2;
+    const rx = Math.max(clipped.width / 2, 1);
+    const ry = Math.max(clipped.height / 2, 1);
+
+    state.context.save();
+    state.context.beginPath();
+    state.context.ellipse(
+      cx,
+      cy,
+      rx,
+      ry,
+      0,
       0,
       Math.PI * 2
     );
+    state.context.clip();
+    state.context.filter =
+      'blur(' + Math.max(5, state.size * 0.8) + 'px)';
+    state.context.drawImage(state.sourceCanvas, 0, 0);
+    state.context.restore();
+  }
 
-    context.clip();
+  function applyMosaicRect(bounds) {
+    applyMosaicRegion(bounds, {
+      shape: 'rect'
+    });
+  }
 
-    context.filter =
-      'blur(' +
-      blurStrength +
-      'px)';
+  function applyMosaicCircle(bounds) {
+    const clipped = clampBoundsToCanvas(bounds);
 
-    context.drawImage(
+    applyMosaicRegion(clipped, {
+      shape: 'circle',
+      cx: clipped.x + clipped.width / 2,
+      cy: clipped.y + clipped.height / 2,
+      rx: Math.max(clipped.width / 2, 1),
+      ry: Math.max(clipped.height / 2, 1)
+    });
+  }
+
+  function applyMosaicRegion(bounds, clipInfo) {
+    const clipped = clampBoundsToCanvas(bounds);
+
+    if (clipped.width < 1 || clipped.height < 1) {
+      return;
+    }
+
+    const pixelSize = Math.max(6, Math.round(state.size * 1.5));
+
+    const tempSmall = document.createElement('canvas');
+    const tempBig = document.createElement('canvas');
+
+    tempSmall.width = Math.max(
+      1,
+      Math.round(clipped.width / pixelSize)
+    );
+    tempSmall.height = Math.max(
+      1,
+      Math.round(clipped.height / pixelSize)
+    );
+
+    tempBig.width = clipped.width;
+    tempBig.height = clipped.height;
+
+    const smallCtx = tempSmall.getContext('2d', {
+      willReadFrequently: true
+    });
+
+    const bigCtx = tempBig.getContext('2d', {
+      willReadFrequently: true
+    });
+
+    smallCtx.clearRect(0, 0, tempSmall.width, tempSmall.height);
+    smallCtx.imageSmoothingEnabled = true;
+
+    smallCtx.drawImage(
       state.sourceCanvas,
+      clipped.x,
+      clipped.y,
+      clipped.width,
+      clipped.height,
       0,
-      0
+      0,
+      tempSmall.width,
+      tempSmall.height
     );
 
-    context.restore();
-  }
+    bigCtx.clearRect(0, 0, tempBig.width, tempBig.height);
+    bigCtx.imageSmoothingEnabled = false;
 
-
-  function getBlurBrushRadius() {
-    return Math.max(
-      15,
-      state.size * 2.5
+    bigCtx.drawImage(
+      tempSmall,
+      0,
+      0,
+      tempSmall.width,
+      tempSmall.height,
+      0,
+      0,
+      tempBig.width,
+      tempBig.height
     );
+
+    state.context.save();
+
+    if (clipInfo && clipInfo.shape === 'circle') {
+      state.context.beginPath();
+      state.context.ellipse(
+        clipInfo.cx,
+        clipInfo.cy,
+        clipInfo.rx,
+        clipInfo.ry,
+        0,
+        0,
+        Math.PI * 2
+      );
+      state.context.clip();
+    } else {
+      state.context.beginPath();
+      state.context.rect(
+        clipped.x,
+        clipped.y,
+        clipped.width,
+        clipped.height
+      );
+      state.context.clip();
+    }
+
+    state.context.drawImage(
+      tempBig,
+      clipped.x,
+      clipped.y
+    );
+
+    state.context.restore();
   }
 
+  function getNormalizedBounds(startX, startY, endX, endY) {
+    return {
+      x: Math.min(startX, endX),
+      y: Math.min(startY, endY),
+      width: Math.abs(endX - startX),
+      height: Math.abs(endY - startY)
+    };
+  }
 
-  /**********************************************************
-   * Source Canvas
-   **********************************************************/
+  function clampBoundsToCanvas(bounds) {
+    const x1 = clamp(bounds.x, 0, state.canvas.width);
+    const y1 = clamp(bounds.y, 0, state.canvas.height);
+    const x2 = clamp(
+      bounds.x + bounds.width,
+      0,
+      state.canvas.width
+    );
+    const y2 = clamp(
+      bounds.y + bounds.height,
+      0,
+      state.canvas.height
+    );
+
+    return {
+      x: Math.floor(Math.min(x1, x2)),
+      y: Math.floor(Math.min(y1, y2)),
+      width: Math.max(Math.floor(Math.abs(x2 - x1)), 1),
+      height: Math.max(Math.floor(Math.abs(y2 - y1)), 1)
+    };
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
 
   function copyCurrentCanvasToSource() {
-    state.sourceCanvas.width =
-      state.canvas.width;
-
-    state.sourceCanvas.height =
-      state.canvas.height;
+    state.sourceCanvas.width = state.canvas.width;
+    state.sourceCanvas.height = state.canvas.height;
 
     state.sourceContext.clearRect(
       0,
@@ -1607,13 +1080,8 @@
       state.sourceCanvas.height
     );
 
-    state.sourceContext.drawImage(
-      state.canvas,
-      0,
-      0
-    );
+    state.sourceContext.drawImage(state.canvas, 0, 0);
   }
-
 
   function restoreCanvasFromSource() {
     state.context.clearRect(
@@ -1623,381 +1091,205 @@
       state.canvas.height
     );
 
-    state.context.drawImage(
-      state.sourceCanvas,
-      0,
-      0
-    );
+    state.context.drawImage(state.sourceCanvas, 0, 0);
   }
-
-
-  /**********************************************************
-   * History
-   **********************************************************/
 
   function createCanvasSnapshot() {
-    return state.canvas.toDataURL(
-      'image/jpeg',
-      0.88
-    );
+    return state.canvas.toDataURL('image/jpeg', 0.88);
   }
 
-
   function pushHistory() {
-    const snapshot =
-      createCanvasSnapshot();
-
+    const snapshot = createCanvasSnapshot();
     const previousSnapshot =
-      state.history[
-        state.history.length - 1
-      ];
+      state.history[state.history.length - 1];
 
-    if (
-      snapshot ===
-      previousSnapshot
-    ) {
+    if (snapshot === previousSnapshot) {
       return;
     }
 
-    state.history.push(
-      snapshot
-    );
+    state.history.push(snapshot);
 
-    while (
-      state.history.length >
-      EDITOR_CONFIG.MAX_HISTORY
-    ) {
+    while (state.history.length > EDITOR_CONFIG.MAX_HISTORY) {
       state.history.shift();
     }
 
     updateUndoButton();
   }
 
-
   async function undoLastAction() {
-    if (
-      state.history.length <= 1
-    ) {
+    if (state.history.length <= 1) {
       return;
     }
 
     state.history.pop();
 
     const previousSnapshot =
-      state.history[
-        state.history.length - 1
-      ];
+      state.history[state.history.length - 1];
 
-    await restoreSnapshot(
-      previousSnapshot
-    );
+    await restoreSnapshot(previousSnapshot);
 
     updateUndoButton();
   }
 
-
   async function resetToOriginal() {
-    if (
-      !state.originalSnapshot
-    ) {
+    if (!state.originalSnapshot) {
       return;
     }
 
-    await restoreSnapshot(
-      state.originalSnapshot
-    );
+    await restoreSnapshot(state.originalSnapshot);
 
-    state.history = [
-      state.originalSnapshot
-    ];
+    state.history = [state.originalSnapshot];
 
     updateUndoButton();
   }
 
+  function restoreSnapshot(dataUrl) {
+    return new Promise(function (resolve, reject) {
+      const image = new Image();
 
-  function restoreSnapshot(
-    dataUrl
-  ) {
-    return new Promise(
-      function (
-        resolve,
-        reject
-      ) {
-        const image =
-          new Image();
+      image.onload = function () {
+        state.context.clearRect(
+          0,
+          0,
+          state.canvas.width,
+          state.canvas.height
+        );
 
-        image.onload =
-          function () {
-            state.context.clearRect(
-              0,
-              0,
-              state.canvas.width,
-              state.canvas.height
-            );
+        state.context.drawImage(
+          image,
+          0,
+          0,
+          state.canvas.width,
+          state.canvas.height
+        );
 
-            state.context.drawImage(
-              image,
-              0,
-              0,
-              state.canvas.width,
-              state.canvas.height
-            );
+        resolve();
+      };
 
-            resolve();
-          };
+      image.onerror = function () {
+        reject(new Error('ไม่สามารถย้อนกลับภาพได้'));
+      };
 
-        image.onerror =
-          function () {
-            reject(
-              new Error(
-                'ไม่สามารถย้อนกลับภาพได้'
-              )
-            );
-          };
-
-        image.src =
-          dataUrl;
-      }
-    );
+      image.src = dataUrl;
+    });
   }
-
 
   function updateUndoButton() {
-    state.undoButton.disabled =
-      state.history.length <= 1;
+    state.undoButton.disabled = state.history.length <= 1;
   }
-
-
-  /**********************************************************
-   * บันทึกภาพ
-   **********************************************************/
 
   async function saveEditedImage() {
     try {
-      if (
-        !state.opened ||
-        state.fileIndex < 0
-      ) {
+      if (!state.opened || state.fileIndex < 0) {
         return;
       }
 
-      setEditorBusy(
-        true,
-        'กำลังสร้างไฟล์ภาพ'
+      setEditorBusy(true, 'กำลังสร้างไฟล์ภาพ');
+
+      const blob = await canvasToBlob(
+        state.canvas,
+        EDITOR_CONFIG.OUTPUT_MIME_TYPE,
+        EDITOR_CONFIG.OUTPUT_QUALITY
       );
 
-      const blob =
-        await canvasToBlob(
-          state.canvas,
-          EDITOR_CONFIG
-            .OUTPUT_MIME_TYPE,
-          EDITOR_CONFIG
-            .OUTPUT_QUALITY
-        );
-
       const originalName =
-        state.originalFile &&
-        state.originalFile.name
+        state.originalFile && state.originalFile.name
           ? state.originalFile.name
           : 'evidence.jpg';
 
       const baseName =
         originalName
-          .replace(
-            /\.[^.]+$/,
-            ''
-          )
-          .replace(
-            /[^A-Za-z0-9ก-๙_-]+/g,
-            '_'
-          )
-          .substring(
-            0,
-            80
-          ) ||
-        'evidence';
+          .replace(/\.[^.]+$/, '')
+          .replace(/[^A-Za-z0-9ก-๙_-]+/g, '_')
+          .substring(0, 80) || 'evidence';
 
-      const editedFile =
-        new File(
-          [
-            blob
-          ],
-          baseName +
-          '_edited_' +
-          Date.now() +
-          '.jpg',
-          {
-            type:
-              EDITOR_CONFIG
-                .OUTPUT_MIME_TYPE,
-
-            lastModified:
-              Date.now()
-          }
-        );
+      const editedFile = new File(
+        [blob],
+        baseName + '_edited_' + Date.now() + '.jpg',
+        {
+          type: EDITOR_CONFIG.OUTPUT_MIME_TYPE,
+          lastModified: Date.now()
+        }
+      );
 
       if (
         !window.SafetyApp ||
-        typeof window.SafetyApp
-          .replaceEvidenceFile !==
-          'function'
+        typeof window.SafetyApp.replaceEvidenceFile !== 'function'
       ) {
-        throw new Error(
-          'ไม่พบฟังก์ชันนำภาพกลับเข้าสู่ฟอร์ม'
-        );
+        throw new Error('ไม่พบฟังก์ชันนำภาพกลับเข้าสู่ฟอร์ม');
       }
 
-      window.SafetyApp
-        .replaceEvidenceFile(
-          state.fileIndex,
-          editedFile
-        );
+      window.SafetyApp.replaceEvidenceFile(
+        state.fileIndex,
+        editedFile
+      );
 
       closeEditor();
-
     } catch (error) {
       console.error(error);
-
       window.alert(
-        error.message ||
-        'ไม่สามารถบันทึกภาพที่แก้ไขได้'
+        error.message || 'ไม่สามารถบันทึกภาพที่แก้ไขได้'
       );
-
     } finally {
-      setEditorBusy(
-        false
-      );
+      setEditorBusy(false);
     }
   }
 
+  function canvasToBlob(canvas, mimeType, quality) {
+    return new Promise(function (resolve, reject) {
+      canvas.toBlob(
+        function (blob) {
+          if (!blob) {
+            reject(new Error('ไม่สามารถสร้างไฟล์ภาพได้'));
+            return;
+          }
 
-  function canvasToBlob(
-    canvas,
-    mimeType,
-    quality
-  ) {
-    return new Promise(
-      function (
-        resolve,
-        reject
-      ) {
-        canvas.toBlob(
-          function (blob) {
-            if (!blob) {
-              reject(
-                new Error(
-                  'ไม่สามารถสร้างไฟล์ภาพได้'
-                )
-              );
-
-              return;
-            }
-
-            resolve(
-              blob
-            );
-          },
-          mimeType,
-          quality
-        );
-      }
-    );
+          resolve(blob);
+        },
+        mimeType,
+        quality
+      );
+    });
   }
 
-
-  /**********************************************************
-   * ปิด Editor
-   **********************************************************/
-
   function closeEditor() {
-    state.modal.hidden =
-      true;
+    state.modal.hidden = true;
+    state.opened = false;
+    state.drawing = false;
+    state.activePointerId = null;
+    state.fileIndex = -1;
+    state.originalFile = null;
+    state.originalSnapshot = '';
+    state.history = [];
 
-    state.opened =
-      false;
-
-    state.drawing =
-      false;
-
-    state.activePointerId =
-      null;
-
-    state.fileIndex =
-      -1;
-
-    state.originalFile =
-      null;
-
-    state.originalSnapshot =
-      '';
-
-    state.history =
-      [];
-
-    document.body.classList.remove(
-      'image-editor-open'
-    );
+    document.body.classList.remove('image-editor-open');
 
     updateUndoButton();
   }
 
+  function setEditorBusy(busy, message) {
+    const isBusy = busy === true;
 
-  /**********************************************************
-   * สถานะกำลังทำงาน
-   **********************************************************/
-
-  function setEditorBusy(
-    busy,
-    message
-  ) {
-    const isBusy =
-      busy === true;
-
-    state.saveButton.disabled =
-      isBusy;
-
-    state.cancelButton.disabled =
-      isBusy;
-
-    state.closeButton.disabled =
-      isBusy;
-
+    state.saveButton.disabled = isBusy;
+    state.cancelButton.disabled = isBusy;
+    state.closeButton.disabled = isBusy;
     state.undoButton.disabled =
-      isBusy ||
-      state.history.length <= 1;
+      isBusy || state.history.length <= 1;
+    state.resetButton.disabled = isBusy;
 
-    state.resetButton.disabled =
-      isBusy;
+    state.modal.classList.toggle('is-busy', isBusy);
 
-    state.modal.classList.toggle(
-      'is-busy',
-      isBusy
-    );
-
-    state.saveButton.textContent =
-      isBusy
-        ? message ||
-          'กำลังดำเนินการ'
-        : 'ใช้ภาพที่แก้ไขแล้ว';
+    state.saveButton.textContent = isBusy
+      ? message || 'กำลังดำเนินการ'
+      : 'ใช้ภาพที่แก้ไขแล้ว';
   }
 
-
-  /**********************************************************
-   * Public API
-   **********************************************************/
-
-  window.SafetyImageEditor =
-    Object.freeze({
-      open:
-        openEditor,
-
-      close:
-        closeEditor,
-
-      isOpen:
-        function () {
-          return state.opened;
-        }
-    });
+  window.SafetyImageEditor = Object.freeze({
+    open: openEditor,
+    close: closeEditor,
+    isOpen: function () {
+      return state.opened;
+    }
+  });
 
 })(window, document);

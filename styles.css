@@ -905,11 +905,17 @@ textarea:disabled {
   }
 }
 /************************************************************
- * Image Editor
+ * Image Editor - Mobile First
  ************************************************************/
 
 body.image-editor-open {
-  overflow: hidden;
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+
+.image-editor-modal[hidden] {
+  display: none !important;
 }
 
 
@@ -918,14 +924,10 @@ body.image-editor-open {
   inset: 0;
   z-index: 12000;
   display: grid;
-  padding:
-    max(10px, env(safe-area-inset-top))
-    10px
-    max(10px, env(safe-area-inset-bottom));
-  place-items: center;
-  background:
-    rgba(9, 24, 34, 0.78);
-  backdrop-filter: blur(6px);
+  padding: 0;
+  place-items: stretch;
+  background: rgba(8, 20, 29, 0.88);
+  backdrop-filter: blur(5px);
 }
 
 
@@ -933,26 +935,32 @@ body.image-editor-open {
   display: grid;
   grid-template-rows:
     auto
-    auto
     minmax(0, 1fr)
+    auto
     auto;
-  width: min(1100px, 100%);
-  height: min(94vh, 920px);
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
   overflow: hidden;
-  border-radius: 18px;
   background: #ffffff;
-  box-shadow:
-    0 28px 80px
-    rgba(0, 0, 0, 0.35);
 }
 
 
+/************************************************************
+ * Header
+ ************************************************************/
+
 .image-editor-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 15px 16px;
+  gap: 10px;
+  min-height: 50px;
+  padding:
+    max(7px, env(safe-area-inset-top))
+    10px
+    7px;
   color: #ffffff;
   background:
     linear-gradient(
@@ -963,34 +971,34 @@ body.image-editor-open {
 }
 
 
-.image-editor-overline {
-  margin: 0 0 2px;
-  color: #bfe4f6;
-  font-size: 0.67rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+.image-editor-heading {
+  min-width: 0;
 }
 
 
-.image-editor-header h2 {
+.image-editor-heading h2 {
   margin: 0;
-  font-size: 1.05rem;
+  overflow: hidden;
+  font-size: 0.98rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 
-.image-editor-subtitle {
-  margin: 4px 0 0;
-  color: #d7e8f1;
-  font-size: 0.74rem;
-  line-height: 1.4;
+.image-editor-heading p {
+  margin: 2px 0 0;
+  color: #d3e5ee;
+  font-size: 0.68rem;
+  line-height: 1.3;
 }
 
 
 .image-editor-close {
   display: grid;
-  flex: 0 0 38px;
-  width: 38px;
-  height: 38px;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   place-items: center;
   border: 1px solid
@@ -999,197 +1007,431 @@ body.image-editor-open {
   color: #ffffff;
   background:
     rgba(255, 255, 255, 0.12);
-  font-size: 1.6rem;
+  font-size: 1.45rem;
   line-height: 1;
 }
 
 
-.image-editor-toolbar {
-  display: grid;
-  gap: 12px;
-  padding: 12px;
-  border-bottom: 1px solid #d9e2e8;
-  background: #f8fafb;
-}
+/************************************************************
+ * Image workspace
+ ************************************************************/
 
-
-.editor-tool-group {
-  display: grid;
-  gap: 7px;
-}
-
-
-.editor-tool-label {
-  color: #526777;
-  font-size: 0.7rem;
-  font-weight: 750;
-}
-
-
-.editor-tool-buttons {
-  display: grid;
-  grid-template-columns:
-    repeat(5, minmax(0, 1fr));
-  gap: 6px;
-}
-
-
-.editor-tool-button {
-  min-height: 40px;
-  padding: 5px 7px;
-  border: 1px solid #cbd7df;
-  border-radius: 9px;
-  color: #314b5c;
-  background: #ffffff;
-  font-size: 0.71rem;
-  font-weight: 750;
-}
-
-
-.editor-tool-button.is-active {
-  border-color: #173f5f;
-  color: #ffffff;
-  background: #173f5f;
-  box-shadow:
-    0 5px 12px
-    rgba(23, 63, 95, 0.18);
-}
-
-
-.editor-setting-grid {
-  display: grid;
-  grid-template-columns:
-    82px
-    minmax(0, 1fr);
-  gap: 10px;
-}
-
-
-.editor-setting {
-  display: grid;
-  gap: 6px;
+.image-editor-workspace {
+  position: relative;
   min-width: 0;
-}
-
-
-.editor-setting > span {
-  color: #526777;
-  font-size: 0.7rem;
-  font-weight: 750;
-}
-
-
-.editor-setting input[type="color"] {
-  width: 100%;
-  min-height: 42px;
-  padding: 3px;
-  border: 1px solid #cbd7df;
-  border-radius: 9px;
-  background: #ffffff;
-}
-
-
-.editor-size-setting input {
-  width: 100%;
-  min-height: 42px;
-}
-
-
-.editor-history-actions {
-  display: grid;
-  grid-template-columns:
-    repeat(2, minmax(0, 1fr));
-  gap: 7px;
-}
-
-
-.editor-action-button {
-  min-height: 40px;
-  padding: 5px 10px;
-  border: 1px solid #cbd7df;
-  border-radius: 9px;
-  color: #314b5c;
-  background: #ffffff;
-  font-size: 0.73rem;
-  font-weight: 750;
-}
-
-
-.editor-action-button:disabled {
-  opacity: 0.45;
+  min-height: 0;
+  overflow: hidden;
+  background: #172630;
 }
 
 
 .image-editor-canvas-wrapper {
-  position: relative;
-  min-height: 0;
+  position: absolute;
+  inset: 0;
   overflow: auto;
-  padding: 12px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
   background:
     repeating-conic-gradient(
-      #d9e0e5 0% 25%,
-      #edf1f4 0% 50%
+      #263944 0% 25%,
+      #314751 0% 50%
     )
     50% /
-    20px 20px;
-  overscroll-behavior: contain;
+    18px 18px;
+}
+
+
+.image-editor-canvas-stage {
+  display: grid;
+  min-width: 100%;
+  min-height: 100%;
+  padding: 10px;
+  place-items: center;
 }
 
 
 .image-editor-canvas {
   display: block;
-  width: auto;
-  max-width: 100%;
-  height: auto;
-  margin: 0 auto;
+  max-width: none !important;
+  max-height: none !important;
   border: 1px solid
-    rgba(17, 45, 64, 0.18);
+    rgba(255, 255, 255, 0.22);
   background: #ffffff;
   box-shadow:
-    0 9px 25px
-    rgba(0, 0, 0, 0.18);
+    0 10px 30px
+    rgba(0, 0, 0, 0.38);
   cursor: crosshair;
   touch-action: none;
   user-select: none;
+  -webkit-user-select: none;
 }
 
 
-.image-editor-canvas.is-blur-tool {
+.image-editor-canvas.is-effect-tool {
   cursor: cell;
 }
 
 
+.image-editor-canvas.is-pan-mode {
+  cursor: grab;
+}
+
+
+.image-editor-canvas.is-panning {
+  cursor: grabbing;
+}
+
+
+/************************************************************
+ * Hint
+ ************************************************************/
+
+.image-editor-hint {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  z-index: 4;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  padding: 7px 11px;
+  transform: translateX(-50%);
+  border: 1px solid
+    rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  color: #ffffff;
+  background:
+    rgba(9, 24, 34, 0.78);
+  box-shadow:
+    0 5px 16px
+    rgba(0, 0, 0, 0.22);
+  font-size: 0.71rem;
+  line-height: 1.35;
+  text-align: center;
+  pointer-events: none;
+}
+
+
+/************************************************************
+ * Zoom / Pan controls
+ ************************************************************/
+
+.image-editor-view-actions {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 5;
+  display: grid;
+  grid-template-columns:
+    34px
+    48px
+    48px
+    34px
+    48px;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid
+    rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  background:
+    rgba(9, 24, 34, 0.82);
+  box-shadow:
+    0 6px 18px
+    rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(8px);
+}
+
+
+.editor-view-button,
+.editor-zoom-value {
+  display: grid;
+  min-width: 0;
+  height: 34px;
+  padding: 0 5px;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  font-size: 0.69rem;
+  font-weight: 800;
+}
+
+
+.editor-view-button {
+  color: #ffffff;
+  background:
+    rgba(255, 255, 255, 0.13);
+}
+
+
+.editor-view-button.is-active {
+  color: #173f5f;
+  background: #ffffff;
+}
+
+
+.editor-zoom-value {
+  color: #ffffff;
+  background: transparent;
+}
+
+
+/************************************************************
+ * Bottom controls
+ ************************************************************/
+
+.image-editor-controls {
+  display: grid;
+  gap: 6px;
+  max-height: 205px;
+  overflow-y: auto;
+  padding: 7px 8px;
+  border-top: 1px solid #d7e0e6;
+  background: #f7f9fa;
+  overscroll-behavior: contain;
+}
+
+
+.editor-category-tabs {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+
+.editor-category-button,
+.editor-tool-button,
+.editor-action-button {
+  min-width: 0;
+  min-height: 36px;
+  padding: 5px 6px;
+  border: 1px solid #c8d4dc;
+  border-radius: 9px;
+  color: #314b5c;
+  background: #ffffff;
+  font-size: 0.71rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+
+.editor-category-button.is-active {
+  border-color: #173f5f;
+  color: #ffffff;
+  background: #173f5f;
+  box-shadow:
+    0 4px 10px
+    rgba(23, 63, 95, 0.18);
+}
+
+
+.editor-tool-buttons {
+  display: grid;
+  gap: 5px;
+}
+
+
+.editor-tool-buttons-draw {
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+}
+
+
+.editor-tool-buttons-effect {
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+}
+
+
+.editor-tool-button.is-active {
+  border-color: #2e6f95;
+  color: #173f5f;
+  background: #e5f2fa;
+  box-shadow:
+    inset 0 0 0 1px
+    #2e6f95;
+}
+
+
+/************************************************************
+ * Color / Size
+ ************************************************************/
+
+.editor-options-row {
+  display: grid;
+  grid-template-columns:
+    minmax(145px, 0.8fr)
+    minmax(0, 1.2fr);
+  gap: 8px;
+  align-items: end;
+}
+
+
+.editor-options-row.is-effect-mode {
+  grid-template-columns:
+    minmax(0, 1fr);
+}
+
+
+.editor-color-setting,
+.editor-size-setting {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+
+.editor-compact-label,
+.editor-size-header {
+  color: #526777;
+  font-size: 0.67rem;
+  font-weight: 800;
+}
+
+
+.editor-color-presets {
+  display: flex;
+  min-width: 0;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 1px;
+  scrollbar-width: none;
+}
+
+
+.editor-color-presets::-webkit-scrollbar {
+  display: none;
+}
+
+
+.editor-color-button,
+.editor-custom-color {
+  position: relative;
+  display: grid;
+  flex: 0 0 25px;
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  place-items: center;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background:
+    var(--editor-color, #ffffff);
+  box-shadow:
+    0 0 0 1px #aab9c3;
+}
+
+
+.editor-color-button.is-active {
+  box-shadow:
+    0 0 0 2px #173f5f,
+    0 0 0 4px #ffffff;
+}
+
+
+.editor-custom-color {
+  overflow: hidden;
+  color: #173f5f;
+  background: #e8eef2;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+
+.editor-custom-color input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+
+.editor-size-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+
+.editor-size-header strong {
+  color: #173f5f;
+  font-size: 0.74rem;
+}
+
+
+.editor-size-setting
+input[type="range"] {
+  width: 100%;
+  min-height: 25px;
+  margin: 0;
+  accent-color: #173f5f;
+}
+
+
+/************************************************************
+ * Undo / Redo
+ ************************************************************/
+
+.editor-history-actions {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+
+.editor-action-button:disabled {
+  opacity: 0.42;
+}
+
+
+.editor-reset-button {
+  color: #9b2c20;
+  background: #fff4f2;
+}
+
+
+/************************************************************
+ * Footer
+ ************************************************************/
+
 .image-editor-footer {
   display: grid;
   grid-template-columns:
-    minmax(0, 0.8fr)
-    minmax(0, 1.4fr);
-  gap: 9px;
+    minmax(0, 0.7fr)
+    minmax(0, 1.3fr);
+  gap: 8px;
   padding:
-    12px
-    12px
+    8px
+    8px
     calc(
-      12px +
-      env(safe-area-inset-bottom, 0px)
+      8px +
+      env(
+        safe-area-inset-bottom,
+        0px
+      )
     );
-  border-top: 1px solid #d9e2e8;
+  border-top: 1px solid #d7e0e6;
   background: #ffffff;
 }
 
 
 .image-editor-cancel,
 .image-editor-save {
-  min-height: 48px;
-  padding: 7px 12px;
+  min-height: 46px;
+  padding: 7px 10px;
   border: 0;
   border-radius: 10px;
-  font-weight: 800;
+  font-size: 0.78rem;
+  font-weight: 850;
 }
 
 
 .image-editor-cancel {
   color: #314b5c;
-  background: #eaf0f4;
+  background: #e7edf1;
 }
 
 
@@ -1197,91 +1439,167 @@ body.image-editor-open {
   color: #ffffff;
   background: #173f5f;
   box-shadow:
-    0 7px 16px
-    rgba(23, 63, 95, 0.2);
+    0 6px 14px
+    rgba(23, 63, 95, 0.22);
 }
 
 
 .image-editor-modal.is-busy
-.image-editor-canvas {
+.image-editor-canvas,
+.image-editor-modal.is-busy
+.image-editor-controls {
   pointer-events: none;
-  opacity: 0.7;
+  opacity: 0.68;
 }
 
 
-@media (min-width: 700px) {
-  .image-editor-toolbar {
+/************************************************************
+ * Very small screen
+ ************************************************************/
+
+@media (max-width: 350px) {
+  .image-editor-heading p {
+    display: none;
+  }
+
+  .image-editor-view-actions {
     grid-template-columns:
-      minmax(0, 2fr)
-      minmax(250px, 1fr)
-      minmax(210px, 0.7fr);
-    align-items: end;
+      31px
+      44px
+      44px
+      31px
+      44px;
+  }
+
+  .editor-category-button,
+  .editor-tool-button,
+  .editor-action-button {
+    padding-inline: 3px;
+    font-size: 0.66rem;
+  }
+
+  .editor-options-row {
+    grid-template-columns:
+      137px
+      minmax(0, 1fr);
+  }
+}
+
+
+/************************************************************
+ * Mobile landscape
+ ************************************************************/
+
+@media
+  (orientation: landscape)
+  and
+  (max-height: 560px) {
+
+  .image-editor-panel {
+    grid-template-columns:
+      minmax(0, 1fr)
+      310px;
+    grid-template-rows:
+      auto
+      minmax(0, 1fr)
+      auto;
   }
 
   .image-editor-header {
-    padding: 18px 20px;
+    grid-column: 1 / -1;
+    grid-row: 1;
   }
 
-  .image-editor-header h2 {
-    font-size: 1.25rem;
+  .image-editor-workspace {
+    grid-column: 1;
+    grid-row: 2 / 4;
   }
 
-  .image-editor-canvas-wrapper {
-    padding: 18px;
+  .image-editor-controls {
+    grid-column: 2;
+    grid-row: 2;
+    max-height: none;
+    border-top: 0;
+    border-left: 1px solid #d7e0e6;
   }
 
   .image-editor-footer {
-    grid-template-columns:
-      170px
-      260px;
-    justify-content: end;
-    padding: 14px 18px;
+    grid-column: 2;
+    grid-row: 3;
   }
 }
 
 
-@media (max-width: 430px) {
-  .editor-tool-buttons {
-    grid-template-columns:
-      repeat(3, minmax(0, 1fr));
+/************************************************************
+ * Desktop / Tablet
+ ************************************************************/
+
+@media
+  (min-width: 900px)
+  and
+  (min-height: 620px) {
+
+  .image-editor-modal {
+    padding: 16px;
+    place-items: center;
   }
 
   .image-editor-panel {
-    height: 97vh;
-    border-radius: 14px;
+    grid-template-columns:
+      minmax(0, 1fr)
+      360px;
+    grid-template-rows:
+      auto
+      minmax(0, 1fr)
+      auto;
+    width: min(1220px, 96vw);
+    height: min(900px, 94vh);
+    border-radius: 18px;
+    box-shadow:
+      0 28px 80px
+      rgba(0, 0, 0, 0.38);
   }
 
-  .image-editor-toolbar {
-    gap: 9px;
-    padding: 10px;
+  .image-editor-header {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    padding: 12px 16px;
   }
 
-  .editor-tool-button {
-    min-height: 38px;
+  .image-editor-heading h2 {
+    font-size: 1.08rem;
   }
-}
-/************************************************************
- * Image Editor - Extra tweak for more tools
- ************************************************************/
 
-.editor-tool-buttons {
-  align-items: stretch;
-}
-
-.editor-tool-button {
-  line-height: 1.25;
-  white-space: normal;
-  word-break: break-word;
-}
-
-@media (min-width: 700px) {
-  .editor-tool-buttons {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+  .image-editor-workspace {
+    grid-column: 1;
+    grid-row: 2 / 4;
   }
-}
 
-@media (max-width: 699px) {
-  .editor-tool-buttons {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .image-editor-controls {
+    grid-column: 2;
+    grid-row: 2;
+    align-content: start;
+    max-height: none;
+    padding: 14px;
+    border-top: 0;
+    border-left: 1px solid #d7e0e6;
+  }
+
+  .image-editor-footer {
+    grid-column: 2;
+    grid-row: 3;
+    padding: 12px 14px;
+  }
+
+  .editor-category-button,
+  .editor-tool-button,
+  .editor-action-button {
+    min-height: 42px;
+    font-size: 0.76rem;
+  }
+
+  .image-editor-view-actions {
+    right: 14px;
+    bottom: 14px;
   }
 }

@@ -10,7 +10,7 @@
 
   <meta
     name="theme-color"
-    content="#173f5f"
+    content="#111a34"
   >
 
   <meta
@@ -22,7 +22,10 @@
     ระบบรายงานการกระทำที่ไม่ปลอดภัย
   </title>
 
- <link rel="stylesheet" href="./styles.css?v=20260619-5">
+  <link
+    rel="stylesheet"
+    href="./styles.css?v=20260620-1"
+  >
 </head>
 
 <body>
@@ -71,7 +74,7 @@
             id="appLogo"
             class="brand-logo"
             src="https://lh5.googleusercontent.com/d/1HicYHV18UaA5y4GFyHJaG9aNI-qjIzIY"
-            alt="โลโก้"
+            alt="SMART DC"
           >
         </div>
 
@@ -83,10 +86,6 @@
           <h1>
             รายงานการกระทำที่ไม่ปลอดภัย
           </h1>
-
-          <p>
-            บันทึกข้อมูลและส่งให้ผู้เกี่ยวข้องดำเนินการ
-          </p>
         </div>
       </div>
 
@@ -95,8 +94,9 @@
         class="connection-status is-loading"
       >
         <span class="status-dot"></span>
+
         <span id="connectionStatusText">
-          กำลังเชื่อมต่อระบบ
+          กำลังเชื่อมต่อ
         </span>
       </div>
     </div>
@@ -105,7 +105,7 @@
 
   <main class="page-shell">
     <section class="system-summary">
-      <div>
+      <div class="summary-item summary-time">
         <span class="summary-label">
           วันที่และเวลา
         </span>
@@ -115,7 +115,7 @@
         </strong>
       </div>
 
-      <div>
+      <div class="summary-item summary-zone">
         <span class="summary-label">
           เขตเวลา
         </span>
@@ -140,19 +140,19 @@
 
           <div>
             <h2>
-              ข้อมูลการปฏิบัติงาน
+              ข้อมูลการรายงาน
             </h2>
 
             <p>
-              ระบุกะและผู้รับผิดชอบในพื้นที่
+              ระบุกะ ผู้รับผิดชอบ และปลายทาง LINE
             </p>
           </div>
         </div>
 
-        <div class="field-grid field-grid-3">
-          <div class="field">
+        <div class="field-grid operation-grid">
+          <div class="field field-shift">
             <label for="workShift">
-              กะทำงาน
+              กะ
               <span class="required">*</span>
             </label>
 
@@ -163,7 +163,7 @@
               disabled
             >
               <option value="">
-                กำลังโหลดข้อมูล
+                กำลังโหลด
               </option>
             </select>
           </div>
@@ -181,7 +181,7 @@
               disabled
             >
               <option value="">
-                กำลังโหลดข้อมูล
+                กำลังโหลด
               </option>
             </select>
           </div>
@@ -199,104 +199,13 @@
               disabled
             >
               <option value="">
-                กำลังโหลดข้อมูล
+                กำลังโหลด
               </option>
             </select>
           </div>
         </div>
-      </section>
 
-
-      <section class="form-card">
-        <div class="section-heading">
-          <span class="section-number">
-            2
-          </span>
-
-          <div>
-            <h2>
-              รายละเอียดการกระทำ
-            </h2>
-
-            <p>
-              กรอกข้อมูลตามเหตุการณ์ที่ตรวจพบ
-            </p>
-          </div>
-        </div>
-
-        <div class="field">
-          <label for="unsafeActionType">
-            ประเภทการกระทำที่ไม่ปลอดภัย
-            <span class="required">*</span>
-          </label>
-
-          <input
-            id="unsafeActionType"
-            name="unsafeActionType"
-            type="text"
-            maxlength="300"
-            required
-            autocomplete="off"
-            placeholder="เช่น ไม่สวมหมวกนิรภัยขณะปฏิบัติงาน"
-          >
-
-          <div class="field-footer">
-            <small>
-              ให้กรอกประเภทการกระทำด้วยตนเอง
-            </small>
-
-            <span id="unsafeActionCounter">
-              0/300
-            </span>
-          </div>
-        </div>
-
-        <div class="field">
-          <label for="problemDetail">
-            รายละเอียดปัญหา
-            <span class="required">*</span>
-          </label>
-
-          <textarea
-            id="problemDetail"
-            name="problemDetail"
-            rows="6"
-            maxlength="5000"
-            required
-            placeholder="อธิบายเหตุการณ์ จุดที่พบ ลักษณะความเสี่ยง และข้อมูลประกอบ"
-          ></textarea>
-
-          <div class="field-footer">
-            <small>
-              ระบุรายละเอียดให้ชัดเจนเพื่อให้ผู้เกี่ยวข้องแก้ไขได้ตรงจุด
-            </small>
-
-            <span id="problemDetailCounter">
-              0/5000
-            </span>
-          </div>
-        </div>
-      </section>
-
-
-      <section class="form-card">
-        <div class="section-heading">
-          <span class="section-number">
-            3
-          </span>
-
-          <div>
-            <h2>
-              ผู้รับการแจ้งเตือน
-            </h2>
-
-            <p>
-              เลือกกลุ่มหรือบุคคลที่ต้องรับ Flex Message
-            </p>
-          </div>
-        </div>
-
-        <div class="field">
+        <div class="field line-target-field">
           <label for="lineTarget">
             ส่ง Flex Message ไปยัง
             <span class="required">*</span>
@@ -314,7 +223,7 @@
           </select>
 
           <small class="field-help">
-            รายการนี้มาจากกลุ่มหรือผู้ใช้ที่ BOT เคยพบผ่าน LINE Webhook
+            เลือกกลุ่มหรือบุคคลที่ต้องรับแจ้ง
           </small>
         </div>
       </section>
@@ -323,16 +232,88 @@
       <section class="form-card">
         <div class="section-heading">
           <span class="section-number">
-            4
+            2
           </span>
 
           <div>
             <h2>
-              ภาพหรือวิดีโอหลักฐาน
+              รายละเอียดเหตุการณ์
             </h2>
 
             <p>
-              แนบได้สูงสุด 3 ไฟล์ และต้องมีอย่างน้อย 1 ไฟล์
+              กรอกข้อมูลที่พบให้ชัดเจน
+            </p>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="unsafeActionType">
+            ประเภทการกระทำที่ไม่ปลอดภัย
+            <span class="required">*</span>
+          </label>
+
+          <input
+            id="unsafeActionType"
+            name="unsafeActionType"
+            type="text"
+            maxlength="300"
+            required
+            autocomplete="off"
+            placeholder="เช่น ไม่สวมหมวกนิรภัย"
+          >
+
+          <div class="field-footer">
+            <small>
+              กรอกด้วยตนเอง
+            </small>
+
+            <span id="unsafeActionCounter">
+              0/300
+            </span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="problemDetail">
+            รายละเอียดปัญหา
+            <span class="required">*</span>
+          </label>
+
+          <textarea
+            id="problemDetail"
+            name="problemDetail"
+            rows="4"
+            maxlength="5000"
+            required
+            placeholder="ระบุเหตุการณ์ จุดที่พบ และลักษณะความเสี่ยง"
+          ></textarea>
+
+          <div class="field-footer">
+            <small>
+              ระบุข้อมูลที่ช่วยให้แก้ไขได้ตรงจุด
+            </small>
+
+            <span id="problemDetailCounter">
+              0/5000
+            </span>
+          </div>
+        </div>
+      </section>
+
+
+      <section class="form-card evidence-card">
+        <div class="section-heading">
+          <span class="section-number">
+            3
+          </span>
+
+          <div>
+            <h2>
+              หลักฐาน
+            </h2>
+
+            <p>
+              แนบได้ 3 ไฟล์ และต้องมีอย่างน้อย 1 ไฟล์
             </p>
           </div>
         </div>
@@ -351,7 +332,7 @@
               </strong>
 
               <span class="slot-required">
-                บังคับอย่างน้อย 1 ไฟล์
+                จำเป็น
               </span>
             </div>
 
@@ -372,11 +353,11 @@
               </span>
 
               <strong>
-                เลือกภาพหรือวิดีโอ
+                เพิ่มไฟล์
               </strong>
 
               <small>
-                JPEG, PNG, WebP, MP4, MOV หรือ WebM
+                ภาพหรือวิดีโอ
               </small>
             </label>
 
@@ -407,7 +388,7 @@
                   data-edit-index="0"
                   hidden
                 >
-                  แก้ไขภาพ
+                  แก้ไข
                 </button>
 
                 <button
@@ -415,7 +396,7 @@
                   class="danger-button"
                   data-remove-index="0"
                 >
-                  ลบไฟล์
+                  ลบ
                 </button>
               </div>
             </div>
@@ -432,7 +413,7 @@
               </strong>
 
               <span>
-                ไม่บังคับ
+                เสริม
               </span>
             </div>
 
@@ -453,11 +434,11 @@
               </span>
 
               <strong>
-                เลือกภาพหรือวิดีโอ
+                เพิ่มไฟล์
               </strong>
 
               <small>
-                ไฟล์ที่สองของเหตุการณ์
+                ภาพหรือวิดีโอ
               </small>
             </label>
 
@@ -488,7 +469,7 @@
                   data-edit-index="1"
                   hidden
                 >
-                  แก้ไขภาพ
+                  แก้ไข
                 </button>
 
                 <button
@@ -496,7 +477,7 @@
                   class="danger-button"
                   data-remove-index="1"
                 >
-                  ลบไฟล์
+                  ลบ
                 </button>
               </div>
             </div>
@@ -513,7 +494,7 @@
               </strong>
 
               <span>
-                ไม่บังคับ
+                เสริม
               </span>
             </div>
 
@@ -534,11 +515,11 @@
               </span>
 
               <strong>
-                เลือกภาพหรือวิดีโอ
+                เพิ่มไฟล์
               </strong>
 
               <small>
-                ไฟล์ที่สามของเหตุการณ์
+                ภาพหรือวิดีโอ
               </small>
             </label>
 
@@ -569,7 +550,7 @@
                   data-edit-index="2"
                   hidden
                 >
-                  แก้ไขภาพ
+                  แก้ไข
                 </button>
 
                 <button
@@ -577,7 +558,7 @@
                   class="danger-button"
                   data-remove-index="2"
                 >
-                  ลบไฟล์
+                  ลบ
                 </button>
               </div>
             </div>
@@ -626,13 +607,13 @@
 
 
       <div class="submit-panel">
-        <div>
+        <div class="submit-copy">
           <strong>
             ตรวจสอบข้อมูลก่อนบันทึก
           </strong>
 
           <span>
-            หลังบันทึก ระบบจะสร้างลิงก์แก้ไขและส่ง Flex Message
+            ระบบจะบันทึกและส่ง Flex Message
           </span>
         </div>
 
@@ -642,7 +623,7 @@
           type="submit"
           disabled
         >
-          บันทึกและส่ง Flex Message
+          บันทึกและส่ง Flex
         </button>
       </div>
     </form>
@@ -656,9 +637,9 @@
   </noscript>
 
 
-<script src="./config.js?v=20260619-5"></script>
-<script src="./api.js?v=20260619-5"></script>
-<script src="./image-editor.js?v=20260619-5"></script>
-<script src="./app.js?v=20260619-5"></script>
+  <script src="./config.js?v=20260620-1"></script>
+  <script src="./api.js?v=20260620-1"></script>
+  <script src="./image-editor.js?v=20260620-1"></script>
+  <script src="./app.js?v=20260620-1"></script>
 </body>
 </html>

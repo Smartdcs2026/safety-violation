@@ -1,53 +1,66 @@
-/**
+/************************************************************
  * config.js
- * ค่าตั้งต้นหน้าเว็บระบบแจ้งการกระทำที่ไม่ปลอดภัย
- */
+ * ค่าตั้งต้นฝั่งหน้าเว็บ
+ *
+ * ห้ามใส่:
+ * - LINE Channel Access Token
+ * - LINE Channel Secret
+ * - GAS_API_SECRET
+ * - Signing Secret
+ ************************************************************/
 
-window.APP_CONFIG = Object.freeze({
-  APP_NAME:
-    'ระบบแจ้งการกระทำที่ไม่ปลอดภัย',
+(function (window) {
+  'use strict';
 
-  API_BASE:
-    'https://safety-violation-api.somchaibutphon.workers.dev',
+  window.APP_CONFIG = Object.freeze({
+    APP_NAME:
+      'ระบบรายงานการกระทำที่ไม่ปลอดภัย',
 
-  LIFF_ID:
-    '2010443605-jWYyda1e',
+    API_BASE:
+      'https://safety-violation-api.somchaibutphon.workers.dev',
 
-  LOGO_URL:
-    'https://lh5.googleusercontent.com/d/1HicYHV18UaA5y4GFyHJaG9aNI-qjIzIY',
+    LOGO_URL:
+      'https://lh5.googleusercontent.com/d/1HicYHV18UaA5y4GFyHJaG9aNI-qjIzIY',
 
-  TIMEZONE:
-    'Asia/Bangkok',
+    TIMEZONE:
+      'Asia/Bangkok',
 
-  API_TIMEOUT_MS:
-    30000,
+    MAX_FILES:
+      3,
 
-  SAVE_TIMEOUT_MS:
-    60000,
+    MAX_IMAGE_BYTES:
+      6 * 1024 * 1024,
 
-  UPLOAD_TIMEOUT_MS:
-    120000,
+    MAX_VIDEO_BYTES:
+      18 * 1024 * 1024,
 
-  MAX_FILES:
-    3,
+    /*
+     * จำกัดขนาดไฟล์ต้นฉบับรวม
+     * เพื่อลดโอกาส JSON ใหญ่เกินไปหลังแปลง Base64
+     */
+    MAX_TOTAL_BYTES:
+      22 * 1024 * 1024,
 
-  MAX_IMAGE_BYTES:
-    5 * 1024 * 1024,
+    ALLOWED_IMAGE_TYPES: Object.freeze([
+      'image/jpeg',
+      'image/png',
+      'image/webp'
+    ]),
 
-  MAX_VIDEO_BYTES:
-    8 * 1024 * 1024,
+    ALLOWED_VIDEO_TYPES: Object.freeze([
+      'video/mp4',
+      'video/quicktime',
+      'video/webm'
+    ]),
 
-  ALLOWED_IMAGE_TYPES: [
-    'image/jpeg',
-    'image/png',
-    'image/webp',
-    'image/heic',
-    'image/heif'
-  ],
+    API_TIMEOUT_MS:
+      30000,
 
-  ALLOWED_VIDEO_TYPES: [
-    'video/mp4',
-    'video/quicktime',
-    'video/webm'
-  ]
-});
+    SAVE_TIMEOUT_MS:
+      180000,
+
+    DEBUG:
+      false
+  });
+
+})(window);

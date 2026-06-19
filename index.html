@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+
+  <meta
+    name="theme-color"
+    content="#173f5f"
+  >
+
+  <meta
+    name="description"
+    content="ระบบรายงานการกระทำที่ไม่ปลอดภัย"
+  >
+
+  <title>
+    ระบบรายงานการกระทำที่ไม่ปลอดภัย
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="./styles.css"
+  >
+</head>
+
+<body>
+  <div
+    id="loadingOverlay"
+    class="loading-overlay"
+    hidden
+  >
+    <div class="loading-panel">
+      <div
+        class="spinner"
+        aria-hidden="true"
+      ></div>
+
+      <strong id="loadingTitle">
+        กำลังดำเนินการ
+      </strong>
+
+      <p id="loadingMessage">
+        กรุณารอสักครู่
+      </p>
+
+      <div
+        class="progress-track"
+        aria-hidden="true"
+      >
+        <div
+          id="progressBar"
+          class="progress-bar"
+          style="width: 0%"
+        ></div>
+      </div>
+
+      <span id="progressText">
+        0%
+      </span>
+    </div>
+  </div>
+
+
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-logo-wrap">
+          <img
+            id="appLogo"
+            class="brand-logo"
+            src="https://lh5.googleusercontent.com/d/1HicYHV18UaA5y4GFyHJaG9aNI-qjIzIY"
+            alt="โลโก้"
+          >
+        </div>
+
+        <div class="brand-text">
+          <p class="brand-overline">
+            SAFETY REPORT
+          </p>
+
+          <h1>
+            รายงานการกระทำที่ไม่ปลอดภัย
+          </h1>
+
+          <p>
+            บันทึกข้อมูลและส่งให้ผู้เกี่ยวข้องดำเนินการ
+          </p>
+        </div>
+      </div>
+
+      <div
+        id="connectionStatus"
+        class="connection-status is-loading"
+      >
+        <span class="status-dot"></span>
+        <span id="connectionStatusText">
+          กำลังเชื่อมต่อระบบ
+        </span>
+      </div>
+    </div>
+  </header>
+
+
+  <main class="page-shell">
+    <section class="system-summary">
+      <div>
+        <span class="summary-label">
+          วันที่และเวลา
+        </span>
+
+        <strong id="currentDateTime">
+          --/--/---- --:--:--
+        </strong>
+      </div>
+
+      <div>
+        <span class="summary-label">
+          เขตเวลา
+        </span>
+
+        <strong>
+          Asia/Bangkok
+        </strong>
+      </div>
+    </section>
+
+
+    <form
+      id="reportForm"
+      class="report-form"
+      novalidate
+    >
+      <section class="form-card">
+        <div class="section-heading">
+          <span class="section-number">
+            1
+          </span>
+
+          <div>
+            <h2>
+              ข้อมูลการปฏิบัติงาน
+            </h2>
+
+            <p>
+              ระบุกะและผู้รับผิดชอบในพื้นที่
+            </p>
+          </div>
+        </div>
+
+        <div class="field-grid field-grid-3">
+          <div class="field">
+            <label for="workShift">
+              กะทำงาน
+              <span class="required">*</span>
+            </label>
+
+            <select
+              id="workShift"
+              name="workShift"
+              required
+              disabled
+            >
+              <option value="">
+                กำลังโหลดข้อมูล
+              </option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="osm">
+              OSM
+              <span class="required">*</span>
+            </label>
+
+            <select
+              id="osm"
+              name="osm"
+              required
+              disabled
+            >
+              <option value="">
+                กำลังโหลดข้อมูล
+              </option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="otm">
+              OTM
+              <span class="required">*</span>
+            </label>
+
+            <select
+              id="otm"
+              name="otm"
+              required
+              disabled
+            >
+              <option value="">
+                กำลังโหลดข้อมูล
+              </option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+
+      <section class="form-card">
+        <div class="section-heading">
+          <span class="section-number">
+            2
+          </span>
+
+          <div>
+            <h2>
+              รายละเอียดการกระทำ
+            </h2>
+
+            <p>
+              กรอกข้อมูลตามเหตุการณ์ที่ตรวจพบ
+            </p>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="unsafeActionType">
+            ประเภทการกระทำที่ไม่ปลอดภัย
+            <span class="required">*</span>
+          </label>
+
+          <input
+            id="unsafeActionType"
+            name="unsafeActionType"
+            type="text"
+            maxlength="300"
+            required
+            autocomplete="off"
+            placeholder="เช่น ไม่สวมหมวกนิรภัยขณะปฏิบัติงาน"
+          >
+
+          <div class="field-footer">
+            <small>
+              ให้กรอกประเภทการกระทำด้วยตนเอง
+            </small>
+
+            <span id="unsafeActionCounter">
+              0/300
+            </span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="problemDetail">
+            รายละเอียดปัญหา
+            <span class="required">*</span>
+          </label>
+
+          <textarea
+            id="problemDetail"
+            name="problemDetail"
+            rows="6"
+            maxlength="5000"
+            required
+            placeholder="อธิบายเหตุการณ์ จุดที่พบ ลักษณะความเสี่ยง และข้อมูลประกอบ"
+          ></textarea>
+
+          <div class="field-footer">
+            <small>
+              ระบุรายละเอียดให้ชัดเจนเพื่อให้ผู้เกี่ยวข้องแก้ไขได้ตรงจุด
+            </small>
+
+            <span id="problemDetailCounter">
+              0/5000
+            </span>
+          </div>
+        </div>
+      </section>
+
+
+      <section class="form-card">
+        <div class="section-heading">
+          <span class="section-number">
+            3
+          </span>
+
+          <div>
+            <h2>
+              ผู้รับการแจ้งเตือน
+            </h2>
+
+            <p>
+              เลือกกลุ่มหรือบุคคลที่ต้องรับ Flex Message
+            </p>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="lineTarget">
+            ส่ง Flex Message ไปยัง
+            <span class="required">*</span>
+          </label>
+
+          <select
+            id="lineTarget"
+            name="lineTarget"
+            required
+            disabled
+          >
+            <option value="">
+              กำลังโหลดปลายทาง LINE
+            </option>
+          </select>
+
+          <small class="field-help">
+            รายการนี้มาจากกลุ่มหรือผู้ใช้ที่ BOT เคยพบผ่าน LINE Webhook
+          </small>
+        </div>
+      </section>
+
+
+      <section class="form-card">
+        <div class="section-heading">
+          <span class="section-number">
+            4
+          </span>
+
+          <div>
+            <h2>
+              ภาพหรือวิดีโอหลักฐาน
+            </h2>
+
+            <p>
+              แนบได้สูงสุด 3 ไฟล์ และต้องมีอย่างน้อย 1 ไฟล์
+            </p>
+          </div>
+        </div>
+
+        <div
+          id="evidenceGrid"
+          class="evidence-grid"
+        >
+          <article
+            class="evidence-slot"
+            data-slot-index="0"
+          >
+            <div class="slot-header">
+              <strong>
+                หลักฐาน 1
+              </strong>
+
+              <span class="slot-required">
+                บังคับอย่างน้อย 1 ไฟล์
+              </span>
+            </div>
+
+            <label
+              class="file-dropzone"
+              for="evidenceFile1"
+            >
+              <input
+                id="evidenceFile1"
+                class="evidence-input"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm"
+                data-file-index="0"
+              >
+
+              <span class="file-symbol">
+                +
+              </span>
+
+              <strong>
+                เลือกภาพหรือวิดีโอ
+              </strong>
+
+              <small>
+                JPEG, PNG, WebP, MP4, MOV หรือ WebM
+              </small>
+            </label>
+
+            <div
+              class="file-preview"
+              data-preview-index="0"
+              hidden
+            >
+              <div
+                class="preview-media"
+                data-preview-media="0"
+              ></div>
+
+              <div class="preview-details">
+                <strong
+                  data-file-name="0"
+                ></strong>
+
+                <span
+                  data-file-size="0"
+                ></span>
+              </div>
+
+              <div class="preview-actions">
+                <button
+                  type="button"
+                  class="secondary-button edit-image-button"
+                  data-edit-index="0"
+                  hidden
+                >
+                  แก้ไขภาพ
+                </button>
+
+                <button
+                  type="button"
+                  class="danger-button"
+                  data-remove-index="0"
+                >
+                  ลบไฟล์
+                </button>
+              </div>
+            </div>
+          </article>
+
+
+          <article
+            class="evidence-slot"
+            data-slot-index="1"
+          >
+            <div class="slot-header">
+              <strong>
+                หลักฐาน 2
+              </strong>
+
+              <span>
+                ไม่บังคับ
+              </span>
+            </div>
+
+            <label
+              class="file-dropzone"
+              for="evidenceFile2"
+            >
+              <input
+                id="evidenceFile2"
+                class="evidence-input"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm"
+                data-file-index="1"
+              >
+
+              <span class="file-symbol">
+                +
+              </span>
+
+              <strong>
+                เลือกภาพหรือวิดีโอ
+              </strong>
+
+              <small>
+                ไฟล์ที่สองของเหตุการณ์
+              </small>
+            </label>
+
+            <div
+              class="file-preview"
+              data-preview-index="1"
+              hidden
+            >
+              <div
+                class="preview-media"
+                data-preview-media="1"
+              ></div>
+
+              <div class="preview-details">
+                <strong
+                  data-file-name="1"
+                ></strong>
+
+                <span
+                  data-file-size="1"
+                ></span>
+              </div>
+
+              <div class="preview-actions">
+                <button
+                  type="button"
+                  class="secondary-button edit-image-button"
+                  data-edit-index="1"
+                  hidden
+                >
+                  แก้ไขภาพ
+                </button>
+
+                <button
+                  type="button"
+                  class="danger-button"
+                  data-remove-index="1"
+                >
+                  ลบไฟล์
+                </button>
+              </div>
+            </div>
+          </article>
+
+
+          <article
+            class="evidence-slot"
+            data-slot-index="2"
+          >
+            <div class="slot-header">
+              <strong>
+                หลักฐาน 3
+              </strong>
+
+              <span>
+                ไม่บังคับ
+              </span>
+            </div>
+
+            <label
+              class="file-dropzone"
+              for="evidenceFile3"
+            >
+              <input
+                id="evidenceFile3"
+                class="evidence-input"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm"
+                data-file-index="2"
+              >
+
+              <span class="file-symbol">
+                +
+              </span>
+
+              <strong>
+                เลือกภาพหรือวิดีโอ
+              </strong>
+
+              <small>
+                ไฟล์ที่สามของเหตุการณ์
+              </small>
+            </label>
+
+            <div
+              class="file-preview"
+              data-preview-index="2"
+              hidden
+            >
+              <div
+                class="preview-media"
+                data-preview-media="2"
+              ></div>
+
+              <div class="preview-details">
+                <strong
+                  data-file-name="2"
+                ></strong>
+
+                <span
+                  data-file-size="2"
+                ></span>
+              </div>
+
+              <div class="preview-actions">
+                <button
+                  type="button"
+                  class="secondary-button edit-image-button"
+                  data-edit-index="2"
+                  hidden
+                >
+                  แก้ไขภาพ
+                </button>
+
+                <button
+                  type="button"
+                  class="danger-button"
+                  data-remove-index="2"
+                >
+                  ลบไฟล์
+                </button>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div
+          id="fileSummary"
+          class="file-summary"
+        >
+          ยังไม่ได้เลือกไฟล์
+        </div>
+      </section>
+
+
+      <section
+        id="formError"
+        class="form-message error-message"
+        role="alert"
+        hidden
+      ></section>
+
+
+      <section
+        id="successPanel"
+        class="success-panel"
+        hidden
+      >
+        <span class="success-mark">
+          ✓
+        </span>
+
+        <div>
+          <h2>
+            บันทึกข้อมูลสำเร็จ
+          </h2>
+
+          <p>
+            รหัสปัญหา
+            <strong id="successCaseId"></strong>
+          </p>
+
+          <p id="successFlexStatus"></p>
+        </div>
+      </section>
+
+
+      <div class="submit-panel">
+        <div>
+          <strong>
+            ตรวจสอบข้อมูลก่อนบันทึก
+          </strong>
+
+          <span>
+            หลังบันทึก ระบบจะสร้างลิงก์แก้ไขและส่ง Flex Message
+          </span>
+        </div>
+
+        <button
+          id="submitButton"
+          class="primary-button"
+          type="submit"
+          disabled
+        >
+          บันทึกและส่ง Flex Message
+        </button>
+      </div>
+    </form>
+  </main>
+
+
+  <noscript>
+    <div class="noscript-message">
+      หน้าเว็บนี้ต้องเปิดใช้งาน JavaScript
+    </div>
+  </noscript>
+
+
+  <script src="./config.js"></script>
+  <script src="./api.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

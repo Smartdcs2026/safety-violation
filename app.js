@@ -481,53 +481,50 @@
         );
       }
 
-      state.ready =
-        true;
+    state.ready =
+  true;
 
-      updateSubmitAvailability();
+setConnectionStatus(
+  'ready',
+  'พร้อมใช้งาน'
+);
 
-      setConnectionStatus(
-        'ready',
-        'พร้อมใช้งาน'
-      );
+updateProgress(
+  100,
+  'พร้อมใช้งาน'
+);
 
-      updateProgress(
-        100,
-        'พร้อมใช้งาน'
-      );
+} catch (error) {
+  state.ready =
+    false;
 
-    } catch (error) {
-      state.ready =
-        false;
+  setConnectionStatus(
+    'error',
+    'ข้อมูลไม่พร้อม'
+  );
 
-      updateSubmitAvailability();
+  showFormError(
+    buildLoadErrorMessage(
+      error
+    )
+  );
 
-      setConnectionStatus(
-        'error',
-        'ข้อมูลไม่พร้อม'
-      );
+  console.error(
+    'Initial data error:',
+    error
+  );
 
-      showFormError(
-        buildLoadErrorMessage(
-          error
-        )
-      );
+} finally {
+  state.loadingOptions =
+    false;
 
-      console.error(
-        'Initial data error:',
-        error
-      );
+  updateSubmitAvailability();
 
-    } finally {
-      state.loadingOptions =
-        false;
-
-      window.setTimeout(
-        hideLoading,
-        300
-      );
-    }
-  }
+  window.setTimeout(
+    hideLoading,
+    300
+  );
+}
 
 
   function assertApiAvailable() {

@@ -1260,3 +1260,28 @@ body.image-editor-open {
     min-height: 38px;
   }
 }
+/************************************************************
+ * Image Editor - Extra tweak for more tools
+ ************************************************************/
+
+.editor-tool-buttons {
+  align-items: stretch;
+}
+
+.editor-tool-button {
+  line-height: 1.25;
+  white-space: normal;
+  word-break: break-word;
+}
+
+@media (min-width: 700px) {
+  .editor-tool-buttons {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 699px) {
+  .editor-tool-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

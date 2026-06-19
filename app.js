@@ -1,6 +1,15 @@
 /************************************************************
  * app.js
- * การทำงานของฟอร์มแจ้งปัญหา
+ * ระบบฟอร์มแจ้งการกระทำที่ไม่ปลอดภัย
+ *
+ * ปรับปรุงรอบนี้:
+ * - ตรวจ Health ก่อนโหลดตัวเลือก
+ * - โหลดตัวเลือกซ้ำอัตโนมัติเมื่อเครือข่ายสะดุด
+ * - เปิดปุ่มบันทึกเมื่อข้อมูลจำเป็นครบจริงเท่านั้น
+ * - แจ้งชัดเจนว่าข้อมูลส่วนใดหาย
+ * - แสดงความคืบหน้าการเตรียมไฟล์และบันทึก
+ * - ป้องกันการกดบันทึกซ้ำ
+ * - รองรับภาพที่ผ่าน Image Editor
  ************************************************************/
 
 (function (window, document) {
@@ -12,8 +21,29 @@
   const API =
     window.SafetyAPI;
 
+  const DEFAULT_SHIFTS =
+    Object.freeze([
+      'A',
+      'B',
+      'C',
+      'D',
+      'N'
+    ]);
+
+  const LOAD_RETRY_COUNT =
+    3;
+
+  const LOAD_RETRY_DELAY_MS =
+    900;
+
   const state = {
+    initialized:
+      false,
+
     ready:
+      false,
+
+    loadingOptions:
       false,
 
     submitting:
@@ -32,7 +62,10 @@
     ],
 
     options:
-      null
+      null,
+
+    readinessErrors:
+      []
   };
 
 
@@ -45,95 +78,27 @@
   );
 
 
+  /************************************************************
+   * Initialize
+   ************************************************************/
+
   async function initialize() {
+    if (state.initialized) {
+      return;
+    }
+
+    state.initialized =
+      true;
+
     cacheElements();
     applyConfig();
     bindEvents();
     startClock();
+    updateCounters();
+    updateFileSummary();
+    updateSubmitAvailability();
 
-    try {
-      setConnectionStatus(
-        'loading',
-        'กำลังโหลดข้อมูลระบบ'
-      );
-
-      showLoading(
-        'กำลังเตรียมฟอร์ม',
-        'กำลังโหลด OSM, OTM และปลายทาง LINE',
-        15
-      );
-
-      const options =
-        await API.getOptions();
-
-      state.options =
-        options;
-
-      populateShiftOptions(
-        options.shifts || []
-      );
-
-      const operation =
-        options.operation || {};
-
-      populateSelect(
-        elements.osm,
-        operation.osm || [],
-        'เลือก OSM'
-      );
-
-      populateSelect(
-        elements.otm,
-        operation.otm || [],
-        'เลือก OTM'
-      );
-
-      populateLineTargets(
-        options.lineTargets || []
-      );
-
-      state.ready =
-        true;
-
-      elements.submitButton.disabled =
-        false;
-
-      setConnectionStatus(
-        'ready',
-        'เชื่อมต่อระบบแล้ว'
-      );
-
-      updateProgress(
-        100,
-        'พร้อมใช้งาน'
-      );
-
-    } catch (error) {
-      state.ready =
-        false;
-
-      elements.submitButton.disabled =
-        true;
-
-      setConnectionStatus(
-        'error',
-        'เชื่อมต่อระบบไม่สำเร็จ'
-      );
-
-      showFormError(
-        buildErrorMessage(
-          error
-        )
-      );
-
-      console.error(error);
-
-    } finally {
-      window.setTimeout(
-        hideLoading,
-        250
-      );
-    }
+    await loadInitialData();
   }
 
 
@@ -257,6 +222,42 @@
       document.getElementById(
         'progressText'
       );
+
+    assertRequiredElements();
+  }
+
+
+  function assertRequiredElements() {
+    const required = [
+      'form',
+      'currentDateTime',
+      'connectionStatus',
+      'connectionStatusText',
+      'workShift',
+      'osm',
+      'otm',
+      'unsafeActionType',
+      'problemDetail',
+      'lineTarget',
+      'submitButton',
+      'loadingOverlay'
+    ];
+
+    const missing =
+      required.filter(
+        function (key) {
+          return !elements[key];
+        }
+      );
+
+    if (
+      missing.length > 0
+    ) {
+      throw new Error(
+        'โครงสร้างหน้าเว็บไม่ครบ: ' +
+        missing.join(', ')
+      );
+    }
   }
 
 
@@ -290,6 +291,8 @@
             elements.unsafeActionCounter,
             300
           );
+
+          clearSuccess();
         }
       );
 
@@ -302,8 +305,27 @@
             elements.problemDetailCounter,
             5000
           );
+
+          clearSuccess();
         }
       );
+
+    [
+      elements.workShift,
+      elements.osm,
+      elements.otm,
+      elements.lineTarget
+    ].forEach(
+      function (select) {
+        select.addEventListener(
+          'change',
+          function () {
+            clearFormError();
+            clearSuccess();
+          }
+        );
+      }
+    );
 
     document
       .querySelectorAll(
@@ -327,95 +349,551 @@
           button.addEventListener(
             'click',
             function () {
-              const index =
+              removeFile(
                 Number(
                   button.dataset
                     .removeIndex
-                );
-
-              removeFile(index);
+                )
+              );
             }
           );
         }
       );
-  }
 
+    window.addEventListener(
+      'online',
+      handleOnline
+    );
 
-  function startClock() {
-    updateClock();
+    window.addEventListener(
+      'offline',
+      handleOffline
+    );
 
-    window.setInterval(
-      updateClock,
-      1000
+    window.addEventListener(
+      'beforeunload',
+      revokeAllPreviewUrls
     );
   }
 
 
-  function updateClock() {
-    elements.currentDateTime.textContent =
-      formatBangkokDateTime(
-        new Date()
+  /************************************************************
+   * Load options
+   ************************************************************/
+
+  async function loadInitialData() {
+    if (
+      state.loadingOptions
+    ) {
+      return;
+    }
+
+    state.loadingOptions =
+      true;
+
+    state.ready =
+      false;
+
+    updateSubmitAvailability();
+
+    setConnectionStatus(
+      'loading',
+      'กำลังโหลดข้อมูล'
+    );
+
+    setSelectLoading(
+      elements.workShift,
+      'กำลังโหลด'
+    );
+
+    setSelectLoading(
+      elements.osm,
+      'กำลังโหลด'
+    );
+
+    setSelectLoading(
+      elements.otm,
+      'กำลังโหลด'
+    );
+
+    setSelectLoading(
+      elements.lineTarget,
+      'กำลังโหลด LINE'
+    );
+
+    showLoading(
+      'กำลังเตรียมฟอร์ม',
+      'กำลังตรวจสอบการเชื่อมต่อ',
+      8
+    );
+
+    clearFormError();
+
+    try {
+      assertApiAvailable();
+
+      updateProgress(
+        18,
+        'กำลังตรวจสอบ Cloudflare Worker'
+      );
+
+      await API.health();
+
+      updateProgress(
+        35,
+        'กำลังโหลด OSM และ OTM'
+      );
+
+      const options =
+        await loadOptionsWithRetry(
+          LOAD_RETRY_COUNT
+        );
+
+      updateProgress(
+        62,
+        'กำลังจัดเตรียมตัวเลือก'
+      );
+
+      const normalized =
+        await normalizeOptions(
+          options
+        );
+
+      state.options =
+        normalized;
+
+      renderOptions(
+        normalized
+      );
+
+      state.readinessErrors =
+        validateLoadedOptions(
+          normalized
+        );
+
+      if (
+        state.readinessErrors
+          .length > 0
+      ) {
+        throw new Error(
+          state.readinessErrors
+            .join(' / ')
+        );
+      }
+
+      state.ready =
+        true;
+
+      updateSubmitAvailability();
+
+      setConnectionStatus(
+        'ready',
+        'พร้อมใช้งาน'
+      );
+
+      updateProgress(
+        100,
+        'พร้อมใช้งาน'
+      );
+
+    } catch (error) {
+      state.ready =
+        false;
+
+      updateSubmitAvailability();
+
+      setConnectionStatus(
+        'error',
+        'ข้อมูลไม่พร้อม'
+      );
+
+      showFormError(
+        buildLoadErrorMessage(
+          error
+        )
+      );
+
+      console.error(
+        'Initial data error:',
+        error
+      );
+
+    } finally {
+      state.loadingOptions =
+        false;
+
+      window.setTimeout(
+        hideLoading,
+        300
+      );
+    }
+  }
+
+
+  function assertApiAvailable() {
+    if (!API) {
+      throw new Error(
+        'ไม่พบ SafetyAPI กรุณาตรวจสอบ api.js'
+      );
+    }
+
+    const requiredMethods = [
+      'health',
+      'getOptions',
+      'createReport',
+      'createRequestId'
+    ];
+
+    const missing =
+      requiredMethods.filter(
+        function (name) {
+          return (
+            typeof API[name] !==
+            'function'
+          );
+        }
+      );
+
+    if (
+      missing.length > 0
+    ) {
+      throw new Error(
+        'SafetyAPI ไม่ครบ: ' +
+        missing.join(', ')
+      );
+    }
+  }
+
+
+  async function loadOptionsWithRetry(
+    maximumAttempts
+  ) {
+    let lastError =
+      null;
+
+    for (
+      let attempt = 1;
+      attempt <= maximumAttempts;
+      attempt++
+    ) {
+      try {
+        return await API.getOptions();
+
+      } catch (error) {
+        lastError =
+          error;
+
+        if (
+          attempt >=
+          maximumAttempts
+        ) {
+          break;
+        }
+
+        updateProgress(
+          35 +
+          attempt * 6,
+          'การเชื่อมต่อสะดุด กำลังลองใหม่ ' +
+          attempt +
+          '/' +
+          (
+            maximumAttempts - 1
+          )
+        );
+
+        await delay(
+          LOAD_RETRY_DELAY_MS *
+          attempt
+        );
+      }
+    }
+
+    throw lastError ||
+      new Error(
+        'โหลดตัวเลือกไม่สำเร็จ'
       );
   }
 
 
-  function formatBangkokDateTime(
-    date
+  async function normalizeOptions(
+    source
   ) {
-    return new Intl.DateTimeFormat(
-      'en-GB',
-      {
-        timeZone:
-          CONFIG.TIMEZONE ||
-          'Asia/Bangkok',
+    const options =
+      source &&
+      typeof source === 'object'
+        ? source
+        : {};
 
-        day:
-          '2-digit',
+    const operation =
+      options.operation &&
+      typeof options.operation ===
+        'object'
+        ? options.operation
+        : {};
 
-        month:
-          '2-digit',
+    let lineTargets =
+      normalizeLineTargets(
+        options.lineTargets
+      );
 
-        year:
-          'numeric',
+    if (
+      lineTargets.length < 1 &&
+      typeof API.getLineTargets ===
+        'function'
+    ) {
+      try {
+        const response =
+          await API.getLineTargets();
 
-        hour:
-          '2-digit',
+        lineTargets =
+          normalizeLineTargets(
+            response
+          );
 
-        minute:
-          '2-digit',
-
-        second:
-          '2-digit',
-
-        hour12:
-          false
+      } catch (error) {
+        console.warn(
+          'ไม่สามารถโหลดปลายทาง LINE แยกได้',
+          error
+        );
       }
-    )
-      .format(date)
-      .replace(',', '');
+    }
+
+    return {
+      shifts:
+        uniqueTextValues(
+          Array.isArray(
+            options.shifts
+          ) &&
+          options.shifts.length > 0
+            ? options.shifts
+            : DEFAULT_SHIFTS
+        ),
+
+      operation: {
+        osm:
+          uniqueTextValues(
+            operation.osm
+          ),
+
+        otm:
+          uniqueTextValues(
+            operation.otm
+          )
+      },
+
+      lineTargets:
+        lineTargets
+    };
   }
 
 
-  function populateShiftOptions(
-    shifts
+  function renderOptions(
+    options
   ) {
-    const values =
-      Array.isArray(shifts) &&
-      shifts.length > 0
-        ? shifts
-        : [
-            'A',
-            'B',
-            'C',
-            'D',
-            'N'
-          ];
-
     populateSelect(
       elements.workShift,
-      values,
-      'เลือกกะทำงาน'
+      options.shifts,
+      'เลือกกะ'
     );
+
+    populateSelect(
+      elements.osm,
+      options.operation.osm,
+      'เลือก OSM'
+    );
+
+    populateSelect(
+      elements.otm,
+      options.operation.otm,
+      'เลือก OTM'
+    );
+
+    populateLineTargets(
+      options.lineTargets
+    );
+  }
+
+
+  function validateLoadedOptions(
+    options
+  ) {
+    const errors = [];
+
+    if (
+      !options.shifts ||
+      options.shifts.length < 1
+    ) {
+      errors.push(
+        'ไม่พบข้อมูลกะทำงาน'
+      );
+    }
+
+    if (
+      !options.operation ||
+      !options.operation.osm ||
+      options.operation.osm
+        .length < 1
+    ) {
+      errors.push(
+        'ไม่พบรายชื่อ OSM ในชีต Operation'
+      );
+    }
+
+    if (
+      !options.operation ||
+      !options.operation.otm ||
+      options.operation.otm
+        .length < 1
+    ) {
+      errors.push(
+        'ไม่พบรายชื่อ OTM ในชีต Operation'
+      );
+    }
+
+    if (
+      !options.lineTargets ||
+      options.lineTargets
+        .length < 1
+    ) {
+      errors.push(
+        'ยังไม่พบปลายทาง LINE สำหรับส่ง Flex'
+      );
+    }
+
+    return errors;
+  }
+
+
+  function uniqueTextValues(
+    values
+  ) {
+    if (
+      !Array.isArray(
+        values
+      )
+    ) {
+      return [];
+    }
+
+    const seen =
+      new Set();
+
+    const result = [];
+
+    values.forEach(
+      function (value) {
+        const text =
+          String(
+            value || ''
+          ).trim();
+
+        if (
+          !text ||
+          seen.has(text)
+        ) {
+          return;
+        }
+
+        seen.add(text);
+        result.push(text);
+      }
+    );
+
+    return result;
+  }
+
+
+  function normalizeLineTargets(
+    targets
+  ) {
+    if (
+      !Array.isArray(
+        targets
+      )
+    ) {
+      return [];
+    }
+
+    const seen =
+      new Set();
+
+    const result = [];
+
+    targets.forEach(
+      function (target) {
+        if (
+          !target ||
+          typeof target !== 'object'
+        ) {
+          return;
+        }
+
+        const id =
+          String(
+            target.id ||
+            target.targetId ||
+            ''
+          ).trim();
+
+        if (
+          !id ||
+          seen.has(id)
+        ) {
+          return;
+        }
+
+        seen.add(id);
+
+        result.push({
+          id:
+            id,
+
+          type:
+            String(
+              target.type ||
+              target.targetType ||
+              'LINE'
+            )
+              .trim()
+              .toUpperCase(),
+
+          name:
+            String(
+              target.name ||
+              target.displayName ||
+              id
+            ).trim()
+        });
+      }
+    );
+
+    return result;
+  }
+
+
+  function setSelectLoading(
+    select,
+    text
+  ) {
+    select.replaceChildren();
+
+    const option =
+      document.createElement(
+        'option'
+      );
+
+    option.value =
+      '';
+
+    option.textContent =
+      text;
+
+    select.appendChild(
+      option
+    );
+
+    select.disabled =
+      true;
   }
 
 
@@ -443,24 +921,16 @@
 
     values.forEach(
       function (value) {
-        const text =
-          String(value || '')
-            .trim();
-
-        if (!text) {
-          return;
-        }
-
         const option =
           document.createElement(
             'option'
           );
 
         option.value =
-          text;
+          value;
 
         option.textContent =
-          text;
+          value;
 
         select.appendChild(
           option
@@ -489,7 +959,7 @@
 
     firstOption.textContent =
       targets.length > 0
-        ? 'เลือกผู้รับ Flex Message'
+        ? 'เลือกปลายทาง LINE'
         : 'ยังไม่พบปลายทาง LINE';
 
     elements.lineTarget.appendChild(
@@ -498,13 +968,6 @@
 
     targets.forEach(
       function (target) {
-        if (
-          !target ||
-          !target.id
-        ) {
-          return;
-        }
-
         const option =
           document.createElement(
             'option'
@@ -514,21 +977,22 @@
           target.id;
 
         option.textContent =
-          [
-            getTargetTypeLabel(
-              target.type
-            ),
-            target.name || target.id
-          ].join(' - ');
+          getTargetTypeLabel(
+            target.type
+          ) +
+          ' - ' +
+          target.name;
 
         option.dataset.targetType =
-          target.type || '';
+          target.type;
 
         option.dataset.targetName =
-          target.name || '';
+          target.name;
 
         elements.lineTarget
-          .appendChild(option);
+          .appendChild(
+            option
+          );
       }
     );
 
@@ -541,14 +1005,15 @@
     type
   ) {
     switch (
-      String(type || '')
-        .toUpperCase()
+      String(
+        type || ''
+      ).toUpperCase()
     ) {
       case 'GROUP':
         return 'กลุ่ม';
 
       case 'ROOM':
-        return 'ห้องสนทนา';
+        return 'ห้อง';
 
       case 'USER':
         return 'บุคคล';
@@ -559,10 +1024,117 @@
   }
 
 
+  function buildLoadErrorMessage(
+    error
+  ) {
+    const message =
+      error &&
+      error.message
+        ? error.message
+        : 'โหลดข้อมูลไม่สำเร็จ';
+
+    return (
+      'ยังไม่สามารถเปิดใช้งานฟอร์มได้: ' +
+      message +
+      ' กรุณาตรวจสอบอินเทอร์เน็ต แล้วรีเฟรชหน้าเว็บ'
+    );
+  }
+
+
+  /************************************************************
+   * Clock
+   ************************************************************/
+
+  function startClock() {
+    updateClock();
+
+    window.setInterval(
+      updateClock,
+      1000
+    );
+  }
+
+
+  function updateClock() {
+    elements.currentDateTime
+      .textContent =
+      formatBangkokDateTime(
+        new Date()
+      );
+  }
+
+
+  function formatBangkokDateTime(
+    date
+  ) {
+    const parts =
+      new Intl.DateTimeFormat(
+        'en-GB',
+        {
+          timeZone:
+            CONFIG.TIMEZONE ||
+            'Asia/Bangkok',
+
+          day:
+            '2-digit',
+
+          month:
+            '2-digit',
+
+          year:
+            'numeric',
+
+          hour:
+            '2-digit',
+
+          minute:
+            '2-digit',
+
+          second:
+            '2-digit',
+
+          hour12:
+            false
+        }
+      )
+        .formatToParts(
+          date
+        );
+
+    const value = {};
+
+    parts.forEach(
+      function (part) {
+        value[part.type] =
+          part.value;
+      }
+    );
+
+    return (
+      value.day +
+      '/' +
+      value.month +
+      '/' +
+      value.year +
+      ' ' +
+      value.hour +
+      ':' +
+      value.minute +
+      ':' +
+      value.second
+    );
+  }
+
+
+  /************************************************************
+   * Evidence files
+   ************************************************************/
+
   function handleFileSelected(
     event
   ) {
     clearFormError();
+    clearSuccess();
 
     const input =
       event.currentTarget;
@@ -622,21 +1194,27 @@
         file.type || ''
       ).toLowerCase();
 
+    const allowedImages =
+      Array.isArray(
+        CONFIG.ALLOWED_IMAGE_TYPES
+      )
+        ? CONFIG.ALLOWED_IMAGE_TYPES
+        : [];
+
+    const allowedVideos =
+      Array.isArray(
+        CONFIG.ALLOWED_VIDEO_TYPES
+      )
+        ? CONFIG.ALLOWED_VIDEO_TYPES
+        : [];
+
     const isImage =
-      (
-        CONFIG
-          .ALLOWED_IMAGE_TYPES ||
-        []
-      ).includes(
+      allowedImages.includes(
         mimeType
       );
 
     const isVideo =
-      (
-        CONFIG
-          .ALLOWED_VIDEO_TYPES ||
-        []
-      ).includes(
+      allowedVideos.includes(
         mimeType
       );
 
@@ -645,7 +1223,7 @@
       !isVideo
     ) {
       throw new Error(
-        'ไฟล์ลำดับที่ ' +
+        'ไฟล์หลักฐาน ' +
         (
           index + 1
         ) +
@@ -703,16 +1281,20 @@
         0
       );
 
-    if (
-      totalSize >
+    const maximumTotal =
       Number(
         CONFIG.MAX_TOTAL_BYTES
-      )
+      ) || 0;
+
+    if (
+      maximumTotal > 0 &&
+      totalSize >
+        maximumTotal
     ) {
       throw new Error(
         'ขนาดไฟล์รวมต้องไม่เกิน ' +
         formatBytes(
-          CONFIG.MAX_TOTAL_BYTES
+          maximumTotal
         )
       );
     }
@@ -738,12 +1320,19 @@
     state.previewUrls[index] =
       previewUrl;
 
-    const dropzone =
+    const slot =
       document.querySelector(
         '[data-slot-index="' +
         index +
-        '"] .file-dropzone'
+        '"]'
       );
+
+    const dropzone =
+      slot
+        ? slot.querySelector(
+            '.file-dropzone'
+          )
+        : null;
 
     const preview =
       document.querySelector(
@@ -773,6 +1362,23 @@
         '"]'
       );
 
+    const editButton =
+      document.querySelector(
+        '[data-edit-index="' +
+        index +
+        '"]'
+      );
+
+    if (
+      !dropzone ||
+      !preview ||
+      !media
+    ) {
+      throw new Error(
+        'ไม่พบช่องแสดงไฟล์หลักฐาน'
+      );
+    }
+
     media.replaceChildren();
 
     if (
@@ -791,26 +1397,17 @@
       image.alt =
         'ตัวอย่างภาพหลักฐาน';
 
+      image.loading =
+        'eager';
+
       media.appendChild(
         image
       );
 
-      const editButton =
-        document.querySelector(
-          '[data-edit-index="' +
-          index +
-          '"]'
-        );
-
-      /*
-       * จะเปิดปุ่มเมื่อเพิ่ม image-editor.js
-       */
-      if (
-        editButton &&
-        window.SafetyImageEditor
-      ) {
+      if (editButton) {
         editButton.hidden =
-          false;
+          !window
+            .SafetyImageEditor;
       }
 
     } else {
@@ -834,17 +1431,26 @@
       media.appendChild(
         video
       );
+
+      if (editButton) {
+        editButton.hidden =
+          true;
+      }
     }
 
-    name.textContent =
-      file.name;
+    if (name) {
+      name.textContent =
+        file.name;
+    }
 
-    size.textContent =
-      file.type +
-      ' · ' +
-      formatBytes(
-        file.size
-      );
+    if (size) {
+      size.textContent =
+        file.type +
+        ' · ' +
+        formatBytes(
+          file.size
+        );
+    }
 
     dropzone.hidden =
       true;
@@ -873,12 +1479,19 @@
         '"]'
       );
 
-    const dropzone =
+    const slot =
       document.querySelector(
         '[data-slot-index="' +
         index +
-        '"] .file-dropzone'
+        '"]'
       );
+
+    const dropzone =
+      slot
+        ? slot.querySelector(
+            '.file-dropzone'
+          )
+        : null;
 
     const preview =
       document.querySelector(
@@ -901,16 +1514,24 @@
         '"]'
       );
 
-    input.value =
-      '';
+    if (input) {
+      input.value =
+        '';
+    }
 
-    media.replaceChildren();
+    if (media) {
+      media.replaceChildren();
+    }
 
-    preview.hidden =
-      true;
+    if (preview) {
+      preview.hidden =
+        true;
+    }
 
-    dropzone.hidden =
-      false;
+    if (dropzone) {
+      dropzone.hidden =
+        false;
+    }
 
     if (editButton) {
       editButton.hidden =
@@ -918,6 +1539,7 @@
     }
 
     updateFileSummary();
+    clearSuccess();
   }
 
 
@@ -937,14 +1559,33 @@
   }
 
 
+  function revokeAllPreviewUrls() {
+    state.previewUrls.forEach(
+      function (
+        previewUrl,
+        index
+      ) {
+        if (previewUrl) {
+          revokePreviewUrl(
+            index
+          );
+        }
+      }
+    );
+  }
+
+
   function updateFileSummary() {
     const selectedFiles =
-      state.files.filter(Boolean);
+      state.files.filter(
+        Boolean
+      );
 
     if (
       selectedFiles.length < 1
     ) {
-      elements.fileSummary.textContent =
+      elements.fileSummary
+        .textContent =
         'ยังไม่ได้เลือกไฟล์';
 
       return;
@@ -964,17 +1605,26 @@
         0
       );
 
-    elements.fileSummary.textContent =
+    elements.fileSummary
+      .textContent =
       'เลือกแล้ว ' +
       selectedFiles.length +
-      ' ไฟล์ จากสูงสุด ' +
-      CONFIG.MAX_FILES +
-      ' ไฟล์ · ขนาดรวม ' +
+      '/' +
+      (
+        Number(
+          CONFIG.MAX_FILES
+        ) || 3
+      ) +
+      ' ไฟล์ · ' +
       formatBytes(
         totalSize
       );
   }
 
+
+  /************************************************************
+   * Submit
+   ************************************************************/
 
   async function handleSubmit(
     event
@@ -988,12 +1638,19 @@
     }
 
     clearFormError();
-    hideSuccess();
+    clearSuccess();
+
+    let requestId =
+      '';
 
     try {
       if (!state.ready) {
         throw new Error(
-          'ระบบยังโหลดข้อมูลไม่เสร็จ'
+          state.readinessErrors
+            .length > 0
+            ? state.readinessErrors
+                .join(' / ')
+            : 'ระบบยังโหลดตัวเลือกไม่ครบ'
         );
       }
 
@@ -1002,19 +1659,31 @@
       state.submitting =
         true;
 
-      elements.submitButton.disabled =
-        true;
+      updateSubmitAvailability();
+
+      requestId =
+        API.createRequestId(
+          'REPORT'
+        );
 
       showLoading(
-        'กำลังเตรียมข้อมูล',
-        'กำลังตรวจสอบและเตรียมไฟล์หลักฐาน',
-        8
+        'กำลังบันทึกข้อมูล',
+        'กำลังตรวจสอบข้อมูล',
+        6
+      );
+
+      updateProgress(
+        12,
+        'ตรวจสอบข้อมูลเรียบร้อย'
       );
 
       const selectedFiles =
-        state.files.filter(Boolean);
+        state.files.filter(
+          Boolean
+        );
 
-      const evidenceFiles = [];
+      const evidenceFiles =
+        [];
 
       for (
         let index = 0;
@@ -1025,14 +1694,23 @@
         const file =
           selectedFiles[index];
 
+        const startPercent =
+          18;
+
+        const endPercent =
+          58;
+
         const percent =
-          10 +
+          startPercent +
           Math.round(
             (
               index /
               selectedFiles.length
             ) *
-            50
+            (
+              endPercent -
+              startPercent
+            )
           );
 
         updateProgress(
@@ -1041,7 +1719,7 @@
           (
             index + 1
           ) +
-          ' จาก ' +
+          '/' +
           selectedFiles.length
         );
 
@@ -1060,21 +1738,46 @@
           base64:
             dataUrl
         });
+
+        updateProgress(
+          startPercent +
+          Math.round(
+            (
+              (
+                index + 1
+              ) /
+              selectedFiles.length
+            ) *
+            (
+              endPercent -
+              startPercent
+            )
+          ),
+          'เตรียมไฟล์ ' +
+          (
+            index + 1
+          ) +
+          ' เรียบร้อย'
+        );
       }
 
       updateProgress(
-        65,
-        'กำลังบันทึกข้อมูลและอัปโหลดหลักฐาน'
+        64,
+        'กำลังจัดเตรียมข้อมูล'
       );
 
-      const selectedTargetOption =
+      const selectedTarget =
         elements.lineTarget
           .selectedOptions[0];
 
-      const requestId =
-        API.createRequestId(
-          'REPORT'
+      if (
+        !selectedTarget ||
+        !elements.lineTarget.value
+      ) {
+        throw new Error(
+          'กรุณาเลือกปลายทาง LINE'
         );
+      }
 
       const payload = {
         requestId:
@@ -1102,21 +1805,29 @@
             .trim(),
 
         lineTargetType:
-          selectedTargetOption
+          selectedTarget
             .dataset
-            .targetType,
+            .targetType ||
+          '',
 
         lineTargetId:
           elements.lineTarget.value,
 
         lineTargetName:
-          selectedTargetOption
+          selectedTarget
             .dataset
-            .targetName,
+            .targetName ||
+          selectedTarget.textContent ||
+          '',
 
         evidenceFiles:
           evidenceFiles
       };
+
+      updateProgress(
+        72,
+        'กำลังอัปโหลดไฟล์ไปยัง Google Drive'
+      );
 
       const response =
         await API.createReport(
@@ -1125,95 +1836,128 @@
         );
 
       updateProgress(
-        100,
-        'บันทึกข้อมูลเรียบร้อยแล้ว'
+        94,
+        'กำลังตรวจสอบผลการส่ง Flex Message'
       );
 
       showSuccess(
         response
       );
 
-      elements.form
+      updateProgress(
+        100,
+        'บันทึกข้อมูลสำเร็จ'
+      );
+
+      setConnectionStatus(
+        'ready',
+        'บันทึกสำเร็จ'
+      );
+
+      elements.successPanel
         .scrollIntoView({
           behavior:
             'smooth',
 
           block:
-            'start'
+            'center'
         });
 
     } catch (error) {
-      console.error(error);
+      console.error(
+        'Submit error:',
+        error
+      );
 
-      showFormError(
+      const message =
         buildErrorMessage(
           error
-        )
+        );
+
+      showFormError(
+        message
+      );
+
+      setConnectionStatus(
+        state.ready
+          ? 'ready'
+          : 'error',
+        state.ready
+          ? 'พร้อมใช้งาน'
+          : 'ข้อมูลไม่พร้อม'
       );
 
     } finally {
       state.submitting =
         false;
 
-      elements.submitButton.disabled =
-        !state.ready;
+      updateSubmitAvailability();
 
       window.setTimeout(
         hideLoading,
-        350
+        400
       );
     }
   }
 
 
   function validateForm() {
-    const fields = [
+    const requiredFields = [
       {
         element:
           elements.workShift,
+
         name:
           'กะทำงาน'
       },
       {
         element:
           elements.osm,
+
         name:
           'OSM'
       },
       {
         element:
           elements.otm,
+
         name:
           'OTM'
       },
       {
         element:
+          elements.lineTarget,
+
+        name:
+          'ปลายทาง LINE'
+      },
+      {
+        element:
           elements.unsafeActionType,
+
         name:
           'ประเภทการกระทำที่ไม่ปลอดภัย'
       },
       {
         element:
           elements.problemDetail,
+
         name:
           'รายละเอียดปัญหา'
-      },
-      {
-        element:
-          elements.lineTarget,
-        name:
-          'ผู้รับ Flex Message'
       }
     ];
 
     for (
-      const item of fields
+      const item of
+        requiredFields
     ) {
-      if (
-        !String(
-          item.element.value || ''
-        ).trim()
-      ) {
+      const value =
+        String(
+          item.element.value ||
+          ''
+        ).trim();
+
+      if (!value) {
         item.element.focus();
 
         throw new Error(
@@ -1223,16 +1967,48 @@
       }
     }
 
-    const files =
-      state.files.filter(Boolean);
+    const selectedFiles =
+      state.files.filter(
+        Boolean
+      );
 
     if (
-      files.length < 1
+      selectedFiles.length < 1
     ) {
       throw new Error(
         'กรุณาแนบภาพหรือวิดีโอหลักฐานอย่างน้อย 1 ไฟล์'
       );
     }
+
+    const maximumFiles =
+      Number(
+        CONFIG.MAX_FILES
+      ) || 3;
+
+    if (
+      selectedFiles.length >
+      maximumFiles
+    ) {
+      throw new Error(
+        'แนบหลักฐานได้สูงสุด ' +
+        maximumFiles +
+        ' ไฟล์'
+      );
+    }
+
+    state.files.forEach(
+      function (
+        file,
+        index
+      ) {
+        if (file) {
+          validateFile(
+            file,
+            index
+          );
+        }
+      }
+    );
   }
 
 
@@ -1249,10 +2025,29 @@
 
         reader.onload =
           function () {
-            resolve(
+            const result =
               String(
-                reader.result || ''
+                reader.result ||
+                ''
+              );
+
+            if (
+              !result.startsWith(
+                'data:'
               )
+            ) {
+              reject(
+                new Error(
+                  'ข้อมูลไฟล์ไม่สมบูรณ์: ' +
+                  file.name
+                )
+              );
+
+              return;
+            }
+
+            resolve(
+              result
             );
           };
 
@@ -1283,6 +2078,10 @@
   }
 
 
+  /************************************************************
+   * Success / Error
+   ************************************************************/
+
   function showSuccess(
     response
   ) {
@@ -1292,18 +2091,22 @@
         ? response.data
         : {};
 
-    elements.successCaseId.textContent =
-      data.caseId || '-';
+    elements.successCaseId
+      .textContent =
+      data.caseId ||
+      '-';
 
     if (
       data.flexSent === true
     ) {
-      elements.successFlexStatus.textContent =
-        'ส่ง Flex Message ไปยังผู้เกี่ยวข้องเรียบร้อยแล้ว';
+      elements.successFlexStatus
+        .textContent =
+        'ส่ง Flex Message เรียบร้อยแล้ว';
 
     } else {
-      elements.successFlexStatus.textContent =
-        'ข้อมูลถูกบันทึกแล้ว แต่การส่ง Flex Message ยังไม่สำเร็จ ระบบได้เก็บสถานะไว้สำหรับตรวจสอบ';
+      elements.successFlexStatus
+        .textContent =
+        'บันทึกข้อมูลแล้ว แต่การส่ง Flex Message ยังไม่สำเร็จ';
     }
 
     elements.successPanel.hidden =
@@ -1311,14 +2114,22 @@
   }
 
 
-  function hideSuccess() {
+  function clearSuccess() {
+    if (
+      !elements.successPanel
+    ) {
+      return;
+    }
+
     elements.successPanel.hidden =
       true;
 
-    elements.successCaseId.textContent =
+    elements.successCaseId
+      .textContent =
       '';
 
-    elements.successFlexStatus.textContent =
+    elements.successFlexStatus
+      .textContent =
       '';
   }
 
@@ -1326,7 +2137,8 @@
   function showFormError(
     message
   ) {
-    elements.formError.textContent =
+    elements.formError
+      .textContent =
       message;
 
     elements.formError.hidden =
@@ -1347,7 +2159,8 @@
     elements.formError.hidden =
       true;
 
-    elements.formError.textContent =
+    elements.formError
+      .textContent =
       '';
   }
 
@@ -1368,11 +2181,25 @@
         : '';
 
     return requestId
-      ? message +
-        ' (Request ID: ' +
-        requestId +
-        ')'
+      ? (
+          message +
+          ' (Request ID: ' +
+          requestId +
+          ')'
+        )
       : message;
+  }
+
+
+  /************************************************************
+   * Status / Loading
+   ************************************************************/
+
+  function updateSubmitAvailability() {
+    elements.submitButton.disabled =
+      !state.ready ||
+      state.loadingOptions ||
+      state.submitting;
   }
 
 
@@ -1391,12 +2218,13 @@
     elements.connectionStatus
       .classList
       .add(
-        'is-' + status
+        'is-' +
+        status
       );
 
     elements.connectionStatusText
       .textContent =
-        message;
+      message;
   }
 
 
@@ -1405,11 +2233,13 @@
     message,
     percent
   ) {
-    elements.loadingTitle.textContent =
+    elements.loadingTitle
+      .textContent =
       title ||
       'กำลังดำเนินการ';
 
-    elements.loadingMessage.textContent =
+    elements.loadingMessage
+      .textContent =
       message ||
       'กรุณารอสักครู่';
 
@@ -1429,8 +2259,16 @@
     elements.loadingOverlay.hidden =
       true;
 
-    document.body.style.overflow =
-      '';
+    if (
+      !document.body
+        .classList
+        .contains(
+          'image-editor-open'
+        )
+    ) {
+      document.body.style.overflow =
+        '';
+    }
   }
 
 
@@ -1443,22 +2281,88 @@
         0,
         Math.min(
           100,
-          Number(percent) || 0
+          Number(
+            percent
+          ) || 0
         )
       );
 
-    elements.progressBar.style.width =
-      safePercent + '%';
+    elements.progressBar
+      .style
+      .width =
+      safePercent +
+      '%';
 
-    elements.progressText.textContent =
+    elements.progressText
+      .textContent =
       Math.round(
         safePercent
-      ) + '%';
+      ) +
+      '%';
 
     if (message) {
-      elements.loadingMessage.textContent =
+      elements.loadingMessage
+        .textContent =
         message;
     }
+  }
+
+
+  /************************************************************
+   * Online / Offline
+   ************************************************************/
+
+  async function handleOnline() {
+    if (
+      state.ready ||
+      state.loadingOptions ||
+      state.submitting
+    ) {
+      return;
+    }
+
+    setConnectionStatus(
+      'loading',
+      'เชื่อมต่อใหม่'
+    );
+
+    await loadInitialData();
+  }
+
+
+  function handleOffline() {
+    state.ready =
+      false;
+
+    updateSubmitAvailability();
+
+    setConnectionStatus(
+      'error',
+      'ไม่มีอินเทอร์เน็ต'
+    );
+
+    showFormError(
+      'อุปกรณ์ไม่ได้เชื่อมต่ออินเทอร์เน็ต กรุณาตรวจสอบเครือข่าย'
+    );
+  }
+
+
+  /************************************************************
+   * Helpers
+   ************************************************************/
+
+  function updateCounters() {
+    updateCounter(
+      elements.unsafeActionType,
+      elements.unsafeActionCounter,
+      300
+    );
+
+    updateCounter(
+      elements.problemDetail,
+      elements.problemDetailCounter,
+      5000
+    );
   }
 
 
@@ -1467,6 +2371,13 @@
     output,
     maximum
   ) {
+    if (
+      !input ||
+      !output
+    ) {
+      return;
+    }
+
     output.textContent =
       input.value.length +
       '/' +
@@ -1478,7 +2389,9 @@
     bytes
   ) {
     const value =
-      Number(bytes) || 0;
+      Number(
+        bytes
+      ) || 0;
 
     if (
       value >=
@@ -1493,7 +2406,8 @@
     }
 
     if (
-      value >= 1024
+      value >=
+      1024
     ) {
       return (
         value /
@@ -1507,32 +2421,58 @@
   }
 
 
-  /*
-   * เตรียมไว้ให้ image-editor.js
-   * นำไฟล์ภาพที่แก้ไขแล้วกลับมาแทนไฟล์เดิม
-   */
-  window.SafetyApp = Object.freeze({
-    replaceEvidenceFile:
+  function delay(
+    milliseconds
+  ) {
+    return new Promise(
       function (
-        index,
-        file
+        resolve
       ) {
-        validateFile(
-          file,
-          index
+        window.setTimeout(
+          resolve,
+          milliseconds
         );
+      }
+    );
+  }
 
-        setFile(
+
+  /************************************************************
+   * Public bridge for Image Editor
+   ************************************************************/
+
+  window.SafetyApp =
+    Object.freeze({
+      replaceEvidenceFile:
+        function (
           index,
           file
-        );
-      },
+        ) {
+          validateFile(
+            file,
+            index
+          );
 
-    getEvidenceFile:
-      function (index) {
-        return state.files[index] ||
-          null;
-      }
-  });
+          setFile(
+            index,
+            file
+          );
+
+          clearSuccess();
+        },
+
+      getEvidenceFile:
+        function (
+          index
+        ) {
+          return (
+            state.files[index] ||
+            null
+          );
+        },
+
+      reloadOptions:
+        loadInitialData
+    });
 
 })(window, document);

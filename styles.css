@@ -274,13 +274,12 @@ button:disabled {
 .system-summary {
   display: grid;
   grid-template-columns:
-    minmax(0, 1.55fr)
-    minmax(0, 0.75fr);
-  gap: 5px;
+    minmax(0, 1fr);
   margin-bottom: 7px;
 }
-
-
+.summary-time {
+  width: 100%;
+}
 .summary-item {
   min-width: 0;
   padding: 6px 8px;

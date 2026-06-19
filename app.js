@@ -295,6 +295,7 @@
           );
 
           clearSuccess();
+          updateSubmitAvailability();
         }
       );
 
@@ -309,6 +310,7 @@
           );
 
           clearSuccess();
+          updateSubmitAvailability();
         }
       );
 
@@ -324,6 +326,7 @@
           function () {
             clearFormError();
             clearSuccess();
+            updateSubmitAvailability();
           }
         );
       }
@@ -1472,6 +1475,7 @@
       false;
 
     updateFileSummary();
+    updateSubmitAvailability();
   }
 
 
@@ -1553,6 +1557,7 @@
 
     updateFileSummary();
     clearSuccess();
+    updateSubmitAvailability();
   }
 
 
@@ -1856,6 +1861,8 @@
       showSuccess(
         response
       );
+
+      resetFormAfterSuccessfulSubmit();
 
       updateProgress(
         100,
@@ -2205,6 +2212,137 @@
 
 
   /************************************************************
+   * Reset after successful submit
+   ************************************************************/
+
+  function resetFormAfterSuccessfulSubmit() {
+    /*
+     * ล้างค่าช่องกรอกและคืน select ไปยังตัวเลือกแรก
+     * แต่ไม่ล้างกล่องข้อความสำเร็จ เพื่อให้ผู้ใช้เห็นรหัสปัญหา
+     */
+    elements.form.reset();
+
+    resetEvidenceFiles();
+
+    updateCounters();
+    updateFileSummary();
+    clearFormError();
+
+    /*
+     * ปุ่มจะถูกปิดไว้จนกว่าจะกรอกข้อมูลใหม่ครบ
+     * จึงไม่สามารถบันทึกรายการเดิมซ้ำได้
+     */
+    updateSubmitAvailability();
+  }
+
+
+  function resetEvidenceFiles() {
+    for (
+      let index = 0;
+      index < state.files.length;
+      index++
+    ) {
+      revokePreviewUrl(
+        index
+      );
+
+      state.files[index] =
+        null;
+
+      const input =
+        document.querySelector(
+          '[data-file-index="' +
+          index +
+          '"]'
+        );
+
+      const slot =
+        document.querySelector(
+          '[data-slot-index="' +
+          index +
+          '"]'
+        );
+
+      const dropzone =
+        slot
+          ? slot.querySelector(
+              '.file-dropzone'
+            )
+          : null;
+
+      const preview =
+        document.querySelector(
+          '[data-preview-index="' +
+          index +
+          '"]'
+        );
+
+      const media =
+        document.querySelector(
+          '[data-preview-media="' +
+          index +
+          '"]'
+        );
+
+      const name =
+        document.querySelector(
+          '[data-file-name="' +
+          index +
+          '"]'
+        );
+
+      const size =
+        document.querySelector(
+          '[data-file-size="' +
+          index +
+          '"]'
+        );
+
+      const editButton =
+        document.querySelector(
+          '[data-edit-index="' +
+          index +
+          '"]'
+        );
+
+      if (input) {
+        input.value =
+          '';
+      }
+
+      if (media) {
+        media.replaceChildren();
+      }
+
+      if (name) {
+        name.textContent =
+          '';
+      }
+
+      if (size) {
+        size.textContent =
+          '';
+      }
+
+      if (preview) {
+        preview.hidden =
+          true;
+      }
+
+      if (dropzone) {
+        dropzone.hidden =
+          false;
+      }
+
+      if (editButton) {
+        editButton.hidden =
+          true;
+      }
+    }
+  }
+
+
+  /************************************************************
    * Status / Loading
    ************************************************************/
 
@@ -2212,7 +2350,52 @@
     elements.submitButton.disabled =
       !state.ready ||
       state.loadingOptions ||
-      state.submitting;
+      state.submitting ||
+      !isFormReadyForSubmit();
+  }
+
+
+  function isFormReadyForSubmit() {
+    if (
+      !elements.workShift ||
+      !elements.osm ||
+      !elements.otm ||
+      !elements.lineTarget ||
+      !elements.unsafeActionType ||
+      !elements.problemDetail
+    ) {
+      return false;
+    }
+
+    const requiredValues = [
+      elements.workShift.value,
+      elements.osm.value,
+      elements.otm.value,
+      elements.lineTarget.value,
+      elements.unsafeActionType.value,
+      elements.problemDetail.value
+    ];
+
+    const fieldsComplete =
+      requiredValues.every(
+        function (value) {
+          return Boolean(
+            String(
+              value || ''
+            ).trim()
+          );
+        }
+      );
+
+    const hasEvidence =
+      state.files.some(
+        Boolean
+      );
+
+    return (
+      fieldsComplete &&
+      hasEvidence
+    );
   }
 
 

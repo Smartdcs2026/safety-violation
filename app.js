@@ -434,7 +434,7 @@
 
       updateProgress(
         18,
-        'กำลังตรวจสอบ Cloudflare Worker'
+        'กำลังตรวจสอบ'
       );
 
       await API.health();

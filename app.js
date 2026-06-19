@@ -10,6 +10,8 @@
  * - แสดงความคืบหน้าการเตรียมไฟล์และบันทึก
  * - ป้องกันการกดบันทึกซ้ำ
  * - รองรับภาพที่ผ่าน Image Editor
+ * - แก้ปุ่มบันทึกค้าง disabled หลังโหลดตัวเลือกสำเร็จ
+ * - แก้โครงสร้างวงเล็บของ loadInitialData() ให้ถูกต้อง
  ************************************************************/
 
 (function (window, document) {
@@ -481,50 +483,64 @@
         );
       }
 
-    state.ready =
-  true;
+      state.ready =
+        true;
 
-setConnectionStatus(
-  'ready',
-  'พร้อมใช้งาน'
-);
+      setConnectionStatus(
+        'ready',
+        'พร้อมใช้งาน'
+      );
 
-updateProgress(
-  100,
-  'พร้อมใช้งาน'
-);
+      updateProgress(
+        100,
+        'พร้อมใช้งาน'
+      );
 
-} catch (error) {
-  state.ready =
-    false;
+    } catch (error) {
+      state.ready =
+        false;
 
-  setConnectionStatus(
-    'error',
-    'ข้อมูลไม่พร้อม'
-  );
+      state.readinessErrors =
+        state.readinessErrors.length > 0
+          ? state.readinessErrors
+          : [
+              error && error.message
+                ? error.message
+                : 'โหลดข้อมูลไม่สำเร็จ'
+            ];
 
-  showFormError(
-    buildLoadErrorMessage(
-      error
-    )
-  );
+      setConnectionStatus(
+        'error',
+        'ข้อมูลไม่พร้อม'
+      );
 
-  console.error(
-    'Initial data error:',
-    error
-  );
+      showFormError(
+        buildLoadErrorMessage(
+          error
+        )
+      );
 
-} finally {
-  state.loadingOptions =
-    false;
+      console.error(
+        'Initial data error:',
+        error
+      );
 
-  updateSubmitAvailability();
+    } finally {
+      state.loadingOptions =
+        false;
 
-  window.setTimeout(
-    hideLoading,
-    300
-  );
-}
+      /*
+       * จุดสำคัญ: ต้องประเมินปุ่มอีกครั้งหลังสถานะโหลดเป็น false
+       * ไม่เช่นนั้นปุ่มจะค้างเป็น disabled แม้ข้อมูลพร้อมแล้ว
+       */
+      updateSubmitAvailability();
+
+      window.setTimeout(
+        hideLoading,
+        300
+      );
+    }
+  }
 
 
   function assertApiAvailable() {

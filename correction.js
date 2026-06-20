@@ -1,7 +1,7 @@
 /************************************************************
  * correction.js
  * ฟอร์มแก้ไขและปิดรายการผ่าน LIFF
- * Version: 2026.06.20-correction-6
+ * Version: 2026.06.20-correction-7
  ************************************************************/
 
 (function (window, document) {
@@ -1724,52 +1724,40 @@
         CONFIG.ALLOWED_IMAGE_TYPES
       )
         ? CONFIG.ALLOWED_IMAGE_TYPES
-        : [];
-
-    const allowedVideos =
-      Array.isArray(
-        CONFIG.ALLOWED_VIDEO_TYPES
-      )
-        ? CONFIG.ALLOWED_VIDEO_TYPES
-        : [];
+        : [
+            'image/jpeg',
+            'image/png',
+            'image/webp'
+          ];
 
     const isImage =
       allowedImages.includes(
         mimeType
       );
 
-    const isVideo =
-      allowedVideos.includes(
-        mimeType
-      );
-
-    if (!isImage && !isVideo) {
+    /*
+     * หลักฐานหลังแก้ไขรับเฉพาะภาพเท่านั้น
+     * แม้ config.js จะยังรองรับวิดีโอสำหรับหน้าแจ้งปัญหาหลัก
+     * หน้า correction จะไม่รับวิดีโอทุกกรณี
+     */
+    if (!isImage) {
       throw new Error(
-        'ไฟล์หลักฐาน ' +
-        (index + 1) +
-        ' เป็นชนิดที่ระบบไม่รองรับ'
+        'หลักฐานหลังแก้ไขรองรับเฉพาะไฟล์ภาพ JPG, PNG หรือ WEBP เท่านั้น'
       );
     }
 
     const maximumBytes =
-      isVideo
-        ? Number(
-            CONFIG.MAX_VIDEO_BYTES
-          )
-        : Number(
-            CONFIG.MAX_IMAGE_BYTES
-          );
+      Number(
+        CONFIG.MAX_IMAGE_BYTES
+      ) || 0;
 
     if (
       maximumBytes > 0 &&
       file.size > maximumBytes
     ) {
       throw new Error(
-        (
-          isVideo
-            ? 'วิดีโอ'
-            : 'ภาพ'
-        ) +
+        'ภาพหลักฐาน ' +
+        (index + 1) +
         ' ต้องมีขนาดไม่เกิน ' +
         formatBytes(maximumBytes)
       );
@@ -1804,7 +1792,7 @@
       total > maximumTotal
     ) {
       throw new Error(
-        'ขนาดไฟล์รวมต้องไม่เกิน ' +
+        'ขนาดภาพรวมต้องไม่เกิน ' +
         formatBytes(maximumTotal)
       );
     }
@@ -1865,39 +1853,21 @@
 
     media.replaceChildren();
 
-    if (
-      file.type.startsWith(
-        'image/'
-      )
-    ) {
-      const image =
-        document.createElement('img');
+    const image =
+      document.createElement('img');
 
-      image.src =
-        previewUrl;
+    image.src =
+      previewUrl;
 
-      image.alt =
-        'ตัวอย่างหลักฐานหลังแก้ไข';
+    image.alt =
+      'ตัวอย่างภาพหลักฐานหลังแก้ไข';
 
-      media.appendChild(image);
-    } else {
-      const video =
-        document.createElement('video');
+    image.loading =
+      'lazy';
 
-      video.src =
-        previewUrl;
-
-      video.controls =
-        true;
-
-      video.preload =
-        'metadata';
-
-      video.playsInline =
-        true;
-
-      media.appendChild(video);
-    }
+    media.appendChild(
+      image
+    );
 
     name.textContent =
       file.name;
@@ -1977,7 +1947,7 @@
 
     if (selected.length < 1) {
       elements.fileSummary.textContent =
-        'ยังไม่ได้เลือกไฟล์';
+        'ยังไม่ได้เลือกภาพ';
       return;
     }
 
@@ -1997,7 +1967,7 @@
         Number(CONFIG.MAX_FILES) ||
         3
       ) +
-      ' ไฟล์ · ' +
+      ' ภาพ · ' +
       formatBytes(total);
   }
 
@@ -2056,6 +2026,18 @@
 
         const file =
           selectedFiles[index];
+
+        if (
+          !String(
+            file && file.type || ''
+          ).toLowerCase().startsWith(
+            'image/'
+          )
+        ) {
+          throw new Error(
+            'พบไฟล์ที่ไม่ใช่ภาพในหลักฐานหลังแก้ไข'
+          );
+        }
 
         const dataUrl =
           await fileToDataUrl(file);
@@ -2241,12 +2223,31 @@
       );
     }
 
+    const selectedImages =
+      state.files.filter(Boolean);
+
     if (
-      state.files.filter(Boolean)
-        .length < 1
+      selectedImages.length < 1
     ) {
       throw new Error(
-        'ต้องแนบหลักฐานหลังแก้ไขอย่างน้อย 1 ไฟล์'
+        'ต้องแนบภาพหลักฐานหลังแก้ไขอย่างน้อย 1 ภาพ'
+      );
+    }
+
+    const invalidFile =
+      selectedImages.find(
+        function (file) {
+          return !String(
+            file && file.type || ''
+          ).toLowerCase().startsWith(
+            'image/'
+          );
+        }
+      );
+
+    if (invalidFile) {
+      throw new Error(
+        'หลักฐานหลังแก้ไขรองรับเฉพาะไฟล์ภาพเท่านั้น'
       );
     }
   }

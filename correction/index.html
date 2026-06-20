@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+
+  <meta
+    name="theme-color"
+    content="#111a34"
+  >
+
+  <meta
+    name="description"
+    content="ฟอร์มดำเนินการแก้ไขการกระทำที่ไม่ปลอดภัย"
+  >
+
+  <title>
+    ดำเนินการแก้ไขปัญหาความปลอดภัย
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="../styles.css?v=20260620-correction-2"
+  >
+</head>
+
+<body class="correction-page">
+  <div
+    id="loadingOverlay"
+    class="loading-overlay"
+  >
+    <div class="loading-panel">
+      <div
+        class="spinner"
+        aria-hidden="true"
+      ></div>
+
+      <strong id="loadingTitle">
+        กำลังเปิดรายการ
+      </strong>
+
+      <p id="loadingMessage">
+        กำลังตรวจสอบ LINE และลิงก์แก้ไข
+      </p>
+
+      <div class="progress-track">
+        <div
+          id="progressBar"
+          class="progress-bar"
+          style="width: 8%"
+        ></div>
+      </div>
+
+      <span id="progressText">
+        8%
+      </span>
+    </div>
+  </div>
+
+
+  <header class="app-header correction-header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-logo-wrap">
+          <img
+            id="appLogo"
+            class="brand-logo"
+            src="https://lh5.googleusercontent.com/d/1HicYHV18UaA5y4GFyHJaG9aNI-qjIzIY"
+            alt="SMART DC"
+          >
+        </div>
+
+        <div class="brand-text">
+          <p class="brand-overline">
+            SAFETY CORRECTION
+          </p>
+
+          <h1>
+            ดำเนินการแก้ไขและปิดงาน
+          </h1>
+        </div>
+      </div>
+
+      <div
+        id="connectionStatus"
+        class="connection-status is-loading"
+      >
+        <span class="status-dot"></span>
+        <span id="connectionStatusText">
+          กำลังตรวจสอบ
+        </span>
+      </div>
+    </div>
+  </header>
+
+
+  <main class="correction-shell">
+    <section
+      id="pageMessage"
+      class="correction-state-card"
+      hidden
+    >
+      <div
+        id="pageMessageIcon"
+        class="correction-state-icon"
+      >
+        !
+      </div>
+
+      <div>
+        <h2 id="pageMessageTitle">
+          ไม่สามารถเปิดรายการได้
+        </h2>
+
+        <p id="pageMessageText"></p>
+
+        <div class="correction-state-actions">
+          <button
+            id="retryButton"
+            type="button"
+            class="secondary-button"
+          >
+            ลองใหม่
+          </button>
+
+          <button
+            id="addFriendButton"
+            type="button"
+            class="primary-button"
+            hidden
+          >
+            เพิ่มเพื่อน LINE BOT
+          </button>
+
+          <button
+            id="closeStateButton"
+            type="button"
+            class="secondary-button"
+          >
+            ปิดหน้านี้
+          </button>
+        </div>
+      </div>
+    </section>
+
+
+    <section
+      id="correctionContent"
+      hidden
+    >
+      <section class="correction-profile-card">
+        <div class="correction-profile-main">
+          <div class="correction-avatar-wrap">
+            <img
+              id="profileImage"
+              alt="รูปโปรไฟล์ LINE"
+              hidden
+            >
+
+            <span id="profileFallback">
+              L
+            </span>
+          </div>
+
+          <div class="correction-profile-copy">
+            <span>
+              ผู้ดำเนินการผ่าน LINE
+            </span>
+
+            <strong id="profileName">
+              กำลังโหลด
+            </strong>
+
+            <small id="profileFriendStatus">
+              กำลังตรวจสอบสถานะเพื่อน
+            </small>
+          </div>
+        </div>
+
+        <span
+          id="caseStatusBadge"
+          class="correction-status-badge"
+        >
+          รอดำเนินการ
+        </span>
+      </section>
+
+
+      <section
+        id="returnTargetCard"
+        class="correction-return-target-card"
+      >
+        <div class="correction-return-target-icon">
+          LINE
+        </div>
+
+        <div class="correction-return-target-copy">
+          <span>
+            แจ้งผลการแก้ไขกลับอัตโนมัติ
+          </span>
+
+          <strong id="returnTargetName">
+            กำลังตรวจสอบปลายทาง
+          </strong>
+
+          <small id="returnTargetType">
+            ไม่ต้องเลือกกลุ่มหรือบุคคลในฟอร์มนี้
+          </small>
+        </div>
+      </section>
+
+
+      <section class="correction-case-card">
+        <div class="correction-card-heading">
+          <div>
+            <span>
+              ปัญหาที่กำลังดำเนินการแก้ไข
+            </span>
+
+            <h2 id="caseIdText">
+              -
+            </h2>
+          </div>
+
+          <span id="reportedAtText">
+            -
+          </span>
+        </div>
+
+        <div class="correction-case-grid">
+          <div>
+            <span>กะ</span>
+            <strong id="shiftText">-</strong>
+          </div>
+
+          <div>
+            <span>OSM</span>
+            <strong id="osmText">-</strong>
+          </div>
+
+          <div>
+            <span>OTM</span>
+            <strong id="otmText">-</strong>
+          </div>
+        </div>
+
+        <div class="correction-original-block">
+          <span>
+            ประเภทการกระทำที่ไม่ปลอดภัย
+          </span>
+
+          <strong id="unsafeActionText">
+            -
+          </strong>
+        </div>
+
+        <div class="correction-original-block">
+          <span>
+            รายละเอียดปัญหา
+          </span>
+
+          <p id="problemDetailText">
+            -
+          </p>
+        </div>
+
+        <div
+          id="originalEvidenceSection"
+          class="correction-original-evidence"
+          hidden
+        >
+          <div class="correction-evidence-heading">
+            <strong>
+              ภาพหรือวิดีโอที่แจ้งปัญหา
+            </strong>
+
+            <span id="originalEvidenceCount"></span>
+          </div>
+
+          <div
+            id="originalEvidenceList"
+            class="correction-original-evidence-list"
+          ></div>
+        </div>
+      </section>
+
+
+      <section
+        id="friendWarning"
+        class="correction-warning-card"
+        hidden
+      >
+        <strong>
+          ต้องเพิ่มเพื่อน LINE BOT ก่อนปิดงาน
+        </strong>
+
+        <p>
+          ระบบยืนยันตัวตนได้แล้ว แต่ยังไม่พบสถานะเพื่อนของ Official Account
+        </p>
+
+        <button
+          id="friendWarningButton"
+          type="button"
+          class="primary-button"
+          hidden
+        >
+          เพิ่มเพื่อน LINE BOT
+        </button>
+      </section>
+
+
+      <form
+        id="correctionForm"
+        class="correction-form"
+        novalidate
+      >
+        <section class="correction-form-card">
+          <div class="section-heading">
+            <span class="section-number">
+              1
+            </span>
+
+            <div>
+              <h2>
+                รายละเอียดการแก้ไข
+              </h2>
+
+              <p>
+                ระบุสิ่งที่ดำเนินการแล้วให้ชัดเจน
+              </p>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="correctionDetail">
+              รายละเอียดการแก้ไข
+              <span class="required">*</span>
+            </label>
+
+            <textarea
+              id="correctionDetail"
+              rows="5"
+              maxlength="5000"
+              required
+              placeholder="เช่น แจ้งเตือนพนักงาน หยุดการทำงาน และดำเนินการแก้ไขสภาพพื้นที่แล้ว"
+            ></textarea>
+
+            <div class="field-footer">
+              <small>
+                ระบุการแก้ไขที่ตรวจสอบได้
+              </small>
+
+              <span id="correctionDetailCounter">
+                0/5000
+              </span>
+            </div>
+          </div>
+        </section>
+
+
+        <section class="correction-form-card">
+          <div class="section-heading">
+            <span class="section-number">
+              2
+            </span>
+
+            <div>
+              <h2>
+                การดำเนินการกับผู้กระทำ
+              </h2>
+
+              <p>
+                เลือกตามการดำเนินการจริง
+              </p>
+            </div>
+          </div>
+
+          <div class="correction-choice-grid">
+            <label class="correction-choice-card">
+              <input
+                type="radio"
+                name="actionTaken"
+                value="มี"
+                required
+              >
+
+              <span class="correction-choice-mark"></span>
+
+              <span>
+                <strong>มีการดำเนินการ</strong>
+                <small>ตักเตือน อบรม หรือดำเนินการตามระเบียบ</small>
+              </span>
+            </label>
+
+            <label class="correction-choice-card">
+              <input
+                type="radio"
+                name="actionTaken"
+                value="ไม่มี"
+                required
+              >
+
+              <span class="correction-choice-mark"></span>
+
+              <span>
+                <strong>ไม่มีการดำเนินการ</strong>
+                <small>แก้ไขเฉพาะสภาพหรือวิธีการทำงาน</small>
+              </span>
+            </label>
+          </div>
+
+          <div
+            id="actionDetailField"
+            class="field correction-conditional-field"
+            hidden
+          >
+            <label for="actionDetail">
+              รายละเอียดการดำเนินการกับผู้กระทำ
+              <span class="required">*</span>
+            </label>
+
+            <textarea
+              id="actionDetail"
+              rows="4"
+              maxlength="5000"
+              placeholder="ระบุการตักเตือน การอบรม หรือมาตรการที่ดำเนินการ"
+            ></textarea>
+
+            <div class="field-footer">
+              <small>
+                บังคับกรอกเมื่อเลือกว่ามีการดำเนินการ
+              </small>
+
+              <span id="actionDetailCounter">
+                0/5000
+              </span>
+            </div>
+          </div>
+        </section>
+
+
+        <section class="correction-form-card">
+          <div class="section-heading">
+            <span class="section-number">
+              3
+            </span>
+
+            <div>
+              <h2>
+                ผู้ยืนยันการแก้ไข
+              </h2>
+
+              <p>
+                เลือก OSM หรือ OTM ที่ตรวจยืนยันรายการนี้
+              </p>
+            </div>
+          </div>
+
+          <div class="correction-confirmer-grid">
+            <div class="field">
+              <label for="confirmerType">
+                ประเภทผู้ยืนยัน
+                <span class="required">*</span>
+              </label>
+
+              <select
+                id="confirmerType"
+                required
+              >
+                <option value="">
+                  เลือกประเภท
+                </option>
+                <option value="OSM">
+                  OSM
+                </option>
+                <option value="OTM">
+                  OTM
+                </option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="confirmerName">
+                ชื่อผู้ยืนยัน
+                <span class="required">*</span>
+              </label>
+
+              <select
+                id="confirmerName"
+                required
+                disabled
+              >
+                <option value="">
+                  เลือกประเภทก่อน
+                </option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+
+        <section class="correction-form-card correction-evidence-card">
+          <div class="section-heading">
+            <span class="section-number">
+              4
+            </span>
+
+            <div>
+              <h2>
+                หลักฐานหลังแก้ไข
+              </h2>
+
+              <p>
+                แนบภาพหรือวิดีโอ 1–3 ไฟล์
+              </p>
+            </div>
+          </div>
+
+          <div class="evidence-grid">
+            <article
+              class="evidence-slot"
+              data-slot-index="0"
+            >
+              <div class="slot-header">
+                <strong>หลักฐาน 1</strong>
+                <span class="slot-required">จำเป็น</span>
+              </div>
+
+              <label
+                class="file-dropzone"
+                for="correctionFile1"
+              >
+                <input
+                  id="correctionFile1"
+                  class="evidence-input"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm"
+                  data-file-index="0"
+                >
+
+                <span class="file-symbol">+</span>
+                <strong>เพิ่มไฟล์</strong>
+                <small>ภาพหรือวิดีโอ</small>
+              </label>
+
+              <div
+                class="file-preview"
+                data-preview-index="0"
+                hidden
+              >
+                <div
+                  class="preview-media"
+                  data-preview-media="0"
+                ></div>
+
+                <div class="preview-details">
+                  <strong data-file-name="0"></strong>
+                  <span data-file-size="0"></span>
+                </div>
+
+                <div class="preview-actions correction-preview-actions">
+                  <button
+                    type="button"
+                    class="danger-button"
+                    data-remove-index="0"
+                  >
+                    ลบ
+                  </button>
+                </div>
+              </div>
+            </article>
+
+            <article
+              class="evidence-slot"
+              data-slot-index="1"
+            >
+              <div class="slot-header">
+                <strong>หลักฐาน 2</strong>
+                <span>เสริม</span>
+              </div>
+
+              <label
+                class="file-dropzone"
+                for="correctionFile2"
+              >
+                <input
+                  id="correctionFile2"
+                  class="evidence-input"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm"
+                  data-file-index="1"
+                >
+
+                <span class="file-symbol">+</span>
+                <strong>เพิ่มไฟล์</strong>
+                <small>ภาพหรือวิดีโอ</small>
+              </label>
+
+              <div
+                class="file-preview"
+                data-preview-index="1"
+                hidden
+              >
+                <div
+                  class="preview-media"
+                  data-preview-media="1"
+                ></div>
+
+                <div class="preview-details">
+                  <strong data-file-name="1"></strong>
+                  <span data-file-size="1"></span>
+                </div>
+
+                <div class="preview-actions correction-preview-actions">
+                  <button
+                    type="button"
+                    class="danger-button"
+                    data-remove-index="1"
+                  >
+                    ลบ
+                  </button>
+                </div>
+              </div>
+            </article>
+
+            <article
+              class="evidence-slot"
+              data-slot-index="2"
+            >
+              <div class="slot-header">
+                <strong>หลักฐาน 3</strong>
+                <span>เสริม</span>
+              </div>
+
+              <label
+                class="file-dropzone"
+                for="correctionFile3"
+              >
+                <input
+                  id="correctionFile3"
+                  class="evidence-input"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm"
+                  data-file-index="2"
+                >
+
+                <span class="file-symbol">+</span>
+                <strong>เพิ่มไฟล์</strong>
+                <small>ภาพหรือวิดีโอ</small>
+              </label>
+
+              <div
+                class="file-preview"
+                data-preview-index="2"
+                hidden
+              >
+                <div
+                  class="preview-media"
+                  data-preview-media="2"
+                ></div>
+
+                <div class="preview-details">
+                  <strong data-file-name="2"></strong>
+                  <span data-file-size="2"></span>
+                </div>
+
+                <div class="preview-actions correction-preview-actions">
+                  <button
+                    type="button"
+                    class="danger-button"
+                    data-remove-index="2"
+                  >
+                    ลบ
+                  </button>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div
+            id="fileSummary"
+            class="file-summary"
+          >
+            ยังไม่ได้เลือกไฟล์
+          </div>
+        </section>
+
+
+        <section
+          id="formError"
+          class="form-message error-message"
+          role="alert"
+          hidden
+        ></section>
+
+
+        <section
+          id="successPanel"
+          class="correction-success-panel"
+          hidden
+        >
+          <span class="correction-success-mark">✓</span>
+
+          <div class="correction-success-content">
+            <h2>
+              บันทึกการแก้ไขสำเร็จ
+            </h2>
+
+            <p>
+              รหัสปัญหา
+              <strong id="successCaseId"></strong>
+            </p>
+
+            <p id="successFlexStatus"></p>
+
+            <div
+              id="successDeliveryList"
+              class="success-delivery-list"
+              hidden
+            ></div>
+
+            <button
+              id="closeSuccessButton"
+              type="button"
+              class="primary-button correction-close-success"
+            >
+              ปิดหน้านี้
+            </button>
+          </div>
+        </section>
+
+
+        <div class="correction-submit-panel">
+          <div>
+            <strong>
+              ตรวจสอบก่อนปิดงาน
+            </strong>
+
+            <span>
+              เมื่อตกลงแล้ว ลิงก์นี้จะถูกปิดใช้งาน
+            </span>
+          </div>
+
+          <button
+            id="submitButton"
+            type="submit"
+            class="primary-button"
+            disabled
+          >
+            บันทึกการแก้ไขและปิดงาน
+          </button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+
+  <script
+    charset="utf-8"
+    src="https://static.line-scdn.net/liff/edge/2/sdk.js"
+  ></script>
+
+  <script src="../config.js?v=20260620-correction-2"></script>
+  <script src="../api.js?v=20260620-correction-2"></script>
+  <script src="../correction.js?v=20260620-correction-2"></script>
+</body>
+</html>

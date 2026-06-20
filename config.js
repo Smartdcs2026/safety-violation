@@ -25,6 +25,21 @@
     TIMEZONE:
       'Asia/Bangkok',
 
+    /*
+     * LIFF ID เป็นข้อมูลสาธารณะ สามารถใส่ในหน้าเว็บได้
+     * ให้นำค่าจาก LINE Developers Console มาแทนข้อความด้านล่าง
+     */
+    LIFF_ID:
+      'PUT_YOUR_LIFF_ID_HERE',
+
+    /*
+     * ใส่ได้เมื่อต้องการแสดงปุ่มเพิ่มเพื่อน BOT
+     * ตัวอย่าง: https://line.me/R/ti/p/@yourbasicid
+     * เว้นว่างได้ โดยระบบยังตรวจสถานะเพื่อนตามปกติ
+     */
+    LINE_BOT_FRIEND_URL:
+      '',
+
     MAX_FILES:
       3,
 

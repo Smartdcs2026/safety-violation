@@ -24,7 +24,7 @@
 
   <link
     rel="stylesheet"
-    href="./styles.css?v=20260620-3"
+    href="./styles.css?v=20260620-6"
   >
 </head>
 
@@ -194,26 +194,65 @@
         </div>
 
         <div class="field line-target-field">
-          <label for="lineTarget">
-            ส่ง Flex Message ไปยัง
-            <span class="required">*</span>
-          </label>
+          <div class="line-target-label-row">
+            <label id="lineTargetLabel">
+              ส่ง Flex Message ไปยัง
+              <span class="required">*</span>
+            </label>
 
-          <select
+            <span
+              id="lineTargetLimit"
+              class="line-target-limit"
+            >
+              เลือกได้สูงสุด 5
+            </span>
+          </div>
+
+          <input
             id="lineTarget"
             name="lineTarget"
-            required
-            disabled
+            type="hidden"
+            value=""
           >
-            <option value="">
-              กำลังโหลดปลายทาง LINE
-            </option>
-          </select>
+
+          <div
+            id="lineTargetSelector"
+            class="line-target-selector is-loading"
+            aria-labelledby="lineTargetLabel"
+            aria-busy="true"
+          >
+            <div class="line-target-toolbar">
+              <strong id="lineTargetSummary">
+                กำลังโหลดปลายทาง LINE
+              </strong>
+
+              <button
+                id="clearLineTargetsButton"
+                class="line-target-clear-button"
+                type="button"
+                disabled
+              >
+                ล้าง
+              </button>
+            </div>
+
+            <div
+              id="lineTargetList"
+              class="line-target-list"
+              role="group"
+              aria-label="รายการปลายทาง LINE"
+            >
+              <p class="line-target-empty">
+                กำลังโหลดปลายทาง LINE
+              </p>
+            </div>
+          </div>
 
           <small class="field-help">
-            เลือกกลุ่มหรือบุคคลที่ต้องรับแจ้ง
+            เลือกได้หลายกลุ่ม หลายห้อง หรือหลายบุคคล
           </small>
         </div>
+
       </section>
 
 
@@ -628,6 +667,6 @@
   <script src="./config.js?v=20260620-3"></script>
   <script src="./api.js?v=20260620-3"></script>
   <script src="./image-editor.js?v=20260620-3"></script>
-  <script src="./app.js?v=20260620-5"></script>
+  <script src="./app.js?v=20260620-6"></script>
 </body>
 </html>

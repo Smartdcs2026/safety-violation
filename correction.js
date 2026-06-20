@@ -1,7 +1,7 @@
 /************************************************************
  * correction.js
  * ฟอร์มแก้ไขและปิดรายการผ่าน LIFF
- * Version: 2026.06.20-correction-5
+ * Version: 2026.06.20-correction-6
  ************************************************************/
 
 (function (window, document) {
@@ -34,6 +34,15 @@
 
     friendFlag:
       false,
+
+    friendRefreshPending:
+      false,
+
+    friendRefreshBusy:
+      false,
+
+    friendOpenedAt:
+      0,
 
     token:
       '',
@@ -144,6 +153,7 @@
       'originalEvidenceList',
       'friendWarning',
       'friendWarningButton',
+      'friendRecheckButton',
       'correctionForm',
       'correctionDetail',
       'correctionDetailCounter',
@@ -226,6 +236,33 @@
     elements.friendWarningButton.addEventListener(
       'click',
       openAddFriendPage
+    );
+
+    elements.friendRecheckButton.addEventListener(
+      'click',
+      refreshFriendshipStatus
+    );
+
+    window.addEventListener(
+      'focus',
+      handleFriendPageReturn
+    );
+
+    window.addEventListener(
+      'pageshow',
+      handleFriendPageReturn
+    );
+
+    document.addEventListener(
+      'visibilitychange',
+      function () {
+        if (
+          document.visibilityState ===
+            'visible'
+        ) {
+          handleFriendPageReturn();
+        }
+      }
     );
 
     elements.correctionForm.addEventListener(
@@ -1046,7 +1083,7 @@
     const files =
       normalizeEvidenceEntries(
         evidence
-      );
+      ).slice(0, 3);
 
     elements.originalEvidenceList
       .replaceChildren();
@@ -1067,16 +1104,12 @@
     files.forEach(
       function (file, index) {
         const item =
-          document.createElement('article');
+          document.createElement(
+            'article'
+          );
 
         item.className =
           'correction-original-evidence-item';
-
-        const mediaWrap =
-          document.createElement('div');
-
-        mediaWrap.className =
-          'correction-original-evidence-media';
 
         const isImage =
           file.mimeType.startsWith(
@@ -1088,125 +1121,21 @@
             'video/'
           );
 
-        if (isImage) {
-          const imageUrl =
-            firstHttpsUrl([
-              file.displayUrl,
-              file.url,
-              file.fileId
-                ? GOOGLE_IMAGE_BASE_URL +
-                  encodeURIComponent(
-                    file.fileId
-                  )
-                : ''
-            ]);
-
-          if (imageUrl) {
-            const image =
-              document.createElement('img');
-
-            image.src =
-              imageUrl;
-
-            image.alt =
-              'ภาพที่แจ้งปัญหา ' +
-              (index + 1);
-
-            image.loading =
-              'lazy';
-
-            mediaWrap.appendChild(
-              image
-            );
-          }
-        } else if (isVideo) {
-          const streamUrl =
-            firstHttpsUrl([
-              file.streamUrl,
-              file.directUrl,
-              file.videoUrl,
-              file.publicVideoUrl
-            ]);
-
-          if (streamUrl) {
-            const video =
-              document.createElement('video');
-
-            video.src =
-              streamUrl;
-
-            video.controls =
-              true;
-
-            video.preload =
-              'metadata';
-
-            video.playsInline =
-              true;
-
-            const poster =
-              firstHttpsUrl([
+        const displayUrl =
+          isImage
+            ? firstHttpsUrl([
+                file.displayUrl,
+                file.url,
+                file.fileId
+                  ? GOOGLE_IMAGE_BASE_URL +
+                    encodeURIComponent(
+                      file.fileId
+                    )
+                  : ''
+              ])
+            : firstHttpsUrl([
                 file.previewUrl
               ]);
-
-            if (poster) {
-              video.poster =
-                poster;
-            }
-
-            mediaWrap.appendChild(
-              video
-            );
-          } else {
-            const icon =
-              document.createElement('div');
-
-            icon.className =
-              'correction-original-video-icon';
-
-            icon.textContent =
-              '▶';
-
-            mediaWrap.appendChild(
-              icon
-            );
-          }
-        }
-
-        item.appendChild(
-          mediaWrap
-        );
-
-        const copy =
-          document.createElement('div');
-
-        copy.className =
-          'correction-original-evidence-copy';
-
-        const name =
-          document.createElement('strong');
-
-        name.textContent =
-          file.fileName ||
-          (
-            isVideo
-              ? 'วิดีโอที่แจ้งปัญหา'
-              : 'ภาพที่แจ้งปัญหา'
-          );
-
-        const type =
-          document.createElement('span');
-
-        type.textContent =
-          file.mimeType ||
-          'ไฟล์หลักฐาน';
-
-        copy.append(
-          name,
-          type
-        );
-
-        item.appendChild(copy);
 
         const viewUrl =
           firstHttpsUrl([
@@ -1216,34 +1145,250 @@
             file.directUrl,
             file.videoUrl,
             file.publicVideoUrl,
-            file.url
+            file.url,
+            displayUrl
           ]);
 
-        if (viewUrl) {
-          const link =
-            document.createElement('a');
+        const mediaButton =
+          document.createElement(
+            'button'
+          );
 
-          link.href =
-            viewUrl;
+        mediaButton.type =
+          'button';
 
-          link.target =
-            '_blank';
+        mediaButton.className =
+          'correction-original-evidence-open';
 
-          link.rel =
-            'noopener noreferrer';
+        mediaButton.disabled =
+          !viewUrl;
 
-          link.textContent =
+        mediaButton.setAttribute(
+          'aria-label',
+          (
             isVideo
-              ? 'เปิดวิดีโอ'
-              : 'เปิดภาพ';
+              ? 'เปิดวิดีโอหลักฐาน '
+              : 'เปิดภาพหลักฐาน '
+          ) +
+          (index + 1)
+        );
 
-          item.appendChild(link);
+        const mediaWrap =
+          document.createElement(
+            'span'
+          );
+
+        mediaWrap.className =
+          'correction-original-evidence-media';
+
+        if (displayUrl) {
+          const image =
+            document.createElement(
+              'img'
+            );
+
+          image.src =
+            displayUrl;
+
+          image.alt =
+            isVideo
+              ? 'ตัวอย่างวิดีโอที่แจ้งปัญหา'
+              : 'ภาพที่แจ้งปัญหา ' +
+                (index + 1);
+
+          image.loading =
+            'lazy';
+
+          mediaWrap.appendChild(
+            image
+          );
+        } else {
+          const icon =
+            document.createElement(
+              'span'
+            );
+
+          icon.className =
+            'correction-original-video-icon';
+
+          icon.textContent =
+            isVideo
+              ? '▶'
+              : 'รูป';
+
+          mediaWrap.appendChild(
+            icon
+          );
         }
+
+        const mediaType =
+          document.createElement(
+            'span'
+          );
+
+        mediaType.className =
+          'correction-original-evidence-type';
+
+        mediaType.textContent =
+          isVideo
+            ? 'VIDEO'
+            : 'IMAGE';
+
+        mediaWrap.appendChild(
+          mediaType
+        );
+
+        if (isVideo) {
+          const play =
+            document.createElement(
+              'span'
+            );
+
+          play.className =
+            'correction-original-video-play';
+
+          play.textContent =
+            '▶';
+
+          mediaWrap.appendChild(
+            play
+          );
+        }
+
+        const openLabel =
+          document.createElement(
+            'span'
+          );
+
+        openLabel.className =
+          'correction-original-open-label';
+
+        openLabel.textContent =
+          viewUrl
+            ? (
+                isVideo
+                  ? 'เปิดวิดีโอ'
+                  : 'เปิดภาพ'
+              )
+            : 'เปิดไม่ได้';
+
+        mediaWrap.appendChild(
+          openLabel
+        );
+
+        mediaButton.appendChild(
+          mediaWrap
+        );
+
+        if (viewUrl) {
+          mediaButton.addEventListener(
+            'click',
+            function () {
+              openMediaUrl(
+                viewUrl
+              );
+            }
+          );
+        }
+
+        const copy =
+          document.createElement(
+            'div'
+          );
+
+        copy.className =
+          'correction-original-evidence-copy';
+
+        const name =
+          document.createElement(
+            'strong'
+          );
+
+        name.textContent =
+          file.fileName ||
+          (
+            isVideo
+              ? 'วิดีโอหลักฐาน'
+              : 'ภาพหลักฐาน'
+          );
+
+        const type =
+          document.createElement(
+            'span'
+          );
+
+        type.textContent =
+          isVideo
+            ? 'แตะเพื่อเปิดวิดีโอ'
+            : 'แตะเพื่อเปิดภาพ';
+
+        copy.append(
+          name,
+          type
+        );
+
+        item.append(
+          mediaButton,
+          copy
+        );
 
         elements.originalEvidenceList
           .appendChild(item);
       }
     );
+  }
+
+
+  function openMediaUrl(value) {
+    const url =
+      normalizeHttpsUrl(
+        value
+      );
+
+    if (!url) {
+      showFormError(
+        'ไม่พบลิงก์สำหรับเปิดไฟล์นี้'
+      );
+      return;
+    }
+
+    try {
+      if (
+        window.liff &&
+        typeof window.liff.isInClient ===
+          'function' &&
+        window.liff.isInClient() &&
+        typeof window.liff.openWindow ===
+          'function'
+      ) {
+        window.liff.openWindow({
+          url:
+            url,
+
+          external:
+            false
+        });
+
+        return;
+      }
+    } catch (error) {
+      console.warn(
+        'LIFF open media failed:',
+        error
+      );
+    }
+
+    const opened =
+      window.open(
+        url,
+        '_blank',
+        'noopener,noreferrer'
+      );
+
+    if (!opened) {
+      window.location.href =
+        url;
+    }
   }
 
 
@@ -1365,15 +1510,25 @@
       state.friendFlag;
 
     const friendUrl =
-      normalizeHttpsUrl(
-        CONFIG.LINE_BOT_FRIEND_URL
-      );
+      getLineBotFriendUrl();
 
     elements.friendWarningButton.hidden =
+      state.friendFlag ||
       !friendUrl;
 
+    elements.friendRecheckButton.hidden =
+      state.friendFlag;
+
+    /*
+     * ปุ่มในหน้าสถานะปิดงานยังคงแสดงได้
+     * เพื่อให้ผู้ใช้เพิ่มเพื่อน BOT ภายหลังได้
+     */
     elements.addFriendButton.hidden =
       !friendUrl;
+
+    if (state.friendFlag) {
+      clearFriendRefreshPending();
+    }
   }
 
 
@@ -2344,9 +2499,7 @@
 
   function openAddFriendPage() {
     const url =
-      normalizeHttpsUrl(
-        CONFIG.LINE_BOT_FRIEND_URL
-      );
+      getLineBotFriendUrl();
 
     if (!url) {
       showFormError(
@@ -2355,25 +2508,321 @@
       return;
     }
 
+    markFriendRefreshPending();
+
+    const buttons = [
+      elements.friendWarningButton,
+      elements.addFriendButton
+    ];
+
+    buttons.forEach(
+      function (button) {
+        if (button) {
+          button.disabled =
+            true;
+        }
+      }
+    );
+
+    try {
+      if (
+        window.liff &&
+        typeof window.liff.isInClient ===
+          'function' &&
+        window.liff.isInClient() &&
+        typeof window.liff.openWindow ===
+          'function'
+      ) {
+        window.liff.openWindow({
+          url:
+            url,
+
+          /*
+           * เปิดภายใน LINE เพื่อให้ Universal Link
+           * พาไปหน้า Official Account ได้โดยตรง
+           */
+          external:
+            false
+        });
+
+        window.setTimeout(
+          function () {
+            buttons.forEach(
+              function (button) {
+                if (button) {
+                  button.disabled =
+                    false;
+                }
+              }
+            );
+          },
+          1200
+        );
+
+        return;
+      }
+    } catch (error) {
+      console.warn(
+        'LIFF add friend open failed:',
+        error
+      );
+    }
+
+    const opened =
+      window.open(
+        url,
+        '_blank',
+        'noopener,noreferrer'
+      );
+
+    if (!opened) {
+      window.location.href =
+        url;
+    }
+
+    window.setTimeout(
+      function () {
+        buttons.forEach(
+          function (button) {
+            if (button) {
+              button.disabled =
+                false;
+            }
+          }
+        );
+      },
+      1200
+    );
+  }
+
+
+  function getLineBotFriendUrl() {
+    const configured =
+      normalizeHttpsUrl(
+        CONFIG.LINE_BOT_FRIEND_URL
+      );
+
+    if (!configured) {
+      return '';
+    }
+
+    /*
+     * LINE Basic ID ที่มี @ ใช้งานได้เสถียรกว่า
+     * เมื่อเข้ารหัสเป็น %40 ใน Universal Link
+     */
+    return configured.replace(
+      '/p/@',
+      '/p/%40'
+    );
+  }
+
+
+  function markFriendRefreshPending() {
+    state.friendRefreshPending =
+      true;
+
+    state.friendOpenedAt =
+      Date.now();
+
+    try {
+      window.sessionStorage.setItem(
+        'safety-correction-friend-refresh',
+        String(
+          state.friendOpenedAt
+        )
+      );
+    } catch (error) {
+      // ใช้ state ในหน่วยความจำแทน
+    }
+  }
+
+
+  function clearFriendRefreshPending() {
+    state.friendRefreshPending =
+      false;
+
+    state.friendOpenedAt =
+      0;
+
+    try {
+      window.sessionStorage.removeItem(
+        'safety-correction-friend-refresh'
+      );
+    } catch (error) {
+      // ไม่กระทบการทำงาน
+    }
+  }
+
+
+  function hasFriendRefreshPending() {
+    if (state.friendRefreshPending) {
+      return true;
+    }
+
+    try {
+      const value =
+        Number(
+          window.sessionStorage.getItem(
+            'safety-correction-friend-refresh'
+          )
+        );
+
+      if (
+        Number.isFinite(value) &&
+        value > 0
+      ) {
+        state.friendRefreshPending =
+          true;
+
+        state.friendOpenedAt =
+          value;
+
+        return true;
+      }
+    } catch (error) {
+      // ไม่มี sessionStorage
+    }
+
+    return false;
+  }
+
+
+  function handleFriendPageReturn() {
     if (
-      window.liff &&
-      typeof window.liff.openWindow ===
-        'function'
+      !hasFriendRefreshPending() ||
+      state.friendRefreshBusy ||
+      state.friendFlag
     ) {
-      window.liff.openWindow({
-        url:
-          url,
-        external:
-          false
-      });
       return;
     }
 
-    window.open(
-      url,
-      '_blank',
-      'noopener,noreferrer'
+    const elapsed =
+      Date.now() -
+      Number(
+        state.friendOpenedAt || 0
+      );
+
+    if (elapsed < 1200) {
+      return;
+    }
+
+    window.setTimeout(
+      refreshFriendshipStatus,
+      350
     );
+  }
+
+
+  async function refreshFriendshipStatus() {
+    if (
+      state.friendRefreshBusy ||
+      !state.token
+    ) {
+      return;
+    }
+
+    state.friendRefreshBusy =
+      true;
+
+    elements.friendRecheckButton.disabled =
+      true;
+
+    const originalText =
+      elements.friendRecheckButton
+        .textContent;
+
+    elements.friendRecheckButton.textContent =
+      'กำลังตรวจสอบ...';
+
+    try {
+      state.accessToken =
+        String(
+          window.liff &&
+          window.liff.getAccessToken
+            ? window.liff.getAccessToken() || ''
+            : state.accessToken
+        );
+
+      state.idToken =
+        String(
+          window.liff &&
+          window.liff.getIDToken
+            ? window.liff.getIDToken() || ''
+            : state.idToken
+        );
+
+      const response =
+        await API.openCorrection(
+          {
+            token:
+              state.token,
+
+            accessToken:
+              state.accessToken,
+
+            idToken:
+              state.idToken,
+
+            returnContext:
+              state.returnContext
+          },
+          API.createRequestId(
+            'FRIEND-CHECK'
+          )
+        );
+
+      const profile =
+        response &&
+        (
+          response.verifiedProfile ||
+          response.profile
+        )
+          ? (
+              response.verifiedProfile ||
+              response.profile
+            )
+          : {};
+
+      state.friendFlag =
+        profile.friendFlag === true ||
+        profile.friendshipStatus === true ||
+        String(
+          profile.friendshipStatus || ''
+        ).toLowerCase() === 'true' ||
+        String(
+          profile.friendshipStatus || ''
+        ).trim() ===
+          'เป็นเพื่อนแล้ว';
+
+      renderProfile(
+        profile
+      );
+
+      handleFriendshipState();
+      updateSubmitAvailability();
+
+      if (!state.friendFlag) {
+        elements.profileFriendStatus.textContent =
+          'ยังไม่พบสถานะเพื่อน กรุณาเพิ่มเพื่อนแล้วตรวจสอบอีกครั้ง';
+      }
+    } catch (error) {
+      console.error(
+        'Friendship refresh error:',
+        error
+      );
+
+      elements.profileFriendStatus.textContent =
+        'ตรวจสอบสถานะเพื่อนไม่สำเร็จ กรุณาลองอีกครั้ง';
+    } finally {
+      state.friendRefreshBusy =
+        false;
+
+      elements.friendRecheckButton.disabled =
+        false;
+
+      elements.friendRecheckButton.textContent =
+        originalText;
+    }
   }
 
 
@@ -2522,9 +2971,7 @@
       true;
 
     elements.addFriendButton.hidden =
-      !normalizeHttpsUrl(
-        CONFIG.LINE_BOT_FRIEND_URL
-      );
+      !getLineBotFriendUrl();
 
     elements.closeStateButton.hidden =
       false;

@@ -24,7 +24,7 @@
 
   <link
     rel="stylesheet"
-    href="./styles.css?v=20260620-6"
+    href="./styles.css?v=20260620-7"
   >
 </head>
 
@@ -217,14 +217,55 @@
 
           <div
             id="lineTargetSelector"
-            class="line-target-selector is-loading"
+            class="line-target-picker is-loading"
             aria-labelledby="lineTargetLabel"
             aria-busy="true"
           >
-            <div class="line-target-toolbar">
-              <strong id="lineTargetSummary">
-                กำลังโหลดปลายทาง LINE
-              </strong>
+            <button
+              id="openLineTargetPickerButton"
+              class="line-target-picker-button"
+              type="button"
+              disabled
+            >
+              <span
+                class="line-target-picker-icon"
+                aria-hidden="true"
+              >
+                L
+              </span>
+
+              <span class="line-target-picker-copy">
+                <strong id="lineTargetSummary">
+                  กำลังโหลดปลายทาง LINE
+                </strong>
+
+                <small>
+                  แตะเพื่อเปิดดูรายชื่อกลุ่มและบุคคลทั้งหมด
+                </small>
+              </span>
+
+              <span
+                class="line-target-picker-chevron"
+                aria-hidden="true"
+              >
+                ›
+              </span>
+            </button>
+
+            <div
+              id="selectedLineTargetList"
+              class="selected-line-target-list"
+              aria-live="polite"
+            >
+              <p class="selected-line-target-empty">
+                ยังไม่ได้เลือกปลายทาง LINE
+              </p>
+            </div>
+
+            <div class="line-target-picker-footer">
+              <span id="lineTargetSelectionHint">
+                ต้องเลือกอย่างน้อย 1 ปลายทาง
+              </span>
 
               <button
                 id="clearLineTargetsButton"
@@ -232,24 +273,13 @@
                 type="button"
                 disabled
               >
-                ล้าง
+                ล้างรายการ
               </button>
-            </div>
-
-            <div
-              id="lineTargetList"
-              class="line-target-list"
-              role="group"
-              aria-label="รายการปลายทาง LINE"
-            >
-              <p class="line-target-empty">
-                กำลังโหลดปลายทาง LINE
-              </p>
             </div>
           </div>
 
           <small class="field-help">
-            เลือกได้หลายกลุ่ม หลายห้อง หรือหลายบุคคล
+            เปิดดูรายการทั้งหมด ค้นหา และจัดลำดับผู้รับได้สูงสุด 5 ปลายทาง
           </small>
         </div>
 
@@ -657,6 +687,173 @@
   </main>
 
 
+  <div
+    id="lineTargetModal"
+    class="line-target-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="lineTargetModalTitle"
+    hidden
+  >
+    <button
+      id="lineTargetModalBackdrop"
+      class="line-target-modal-backdrop"
+      type="button"
+      aria-label="ปิดหน้าต่างเลือกปลายทาง"
+    ></button>
+
+    <section class="line-target-modal-panel">
+      <header class="line-target-modal-header">
+        <div>
+          <p class="line-target-modal-overline">
+            LINE DESTINATIONS
+          </p>
+
+          <h2 id="lineTargetModalTitle">
+            เลือกกลุ่มหรือบุคคล
+          </h2>
+
+          <p>
+            เลือกตามลำดับที่ต้องการส่งได้สูงสุด 5 ปลายทาง
+          </p>
+        </div>
+
+        <button
+          id="closeLineTargetModalButton"
+          class="line-target-modal-close"
+          type="button"
+          aria-label="ปิด"
+        >
+          ×
+        </button>
+      </header>
+
+      <div class="line-target-modal-tools">
+        <div class="line-target-search-wrap">
+          <span
+            class="line-target-search-icon"
+            aria-hidden="true"
+          >
+            ⌕
+          </span>
+
+          <input
+            id="lineTargetSearch"
+            class="line-target-search"
+            type="search"
+            autocomplete="off"
+            placeholder="ค้นหาชื่อกลุ่ม บุคคล หรือห้องสนทนา"
+          >
+
+          <button
+            id="clearLineTargetSearchButton"
+            class="line-target-search-clear"
+            type="button"
+            aria-label="ล้างคำค้นหา"
+            hidden
+          >
+            ×
+          </button>
+        </div>
+
+        <div
+          id="lineTargetFilters"
+          class="line-target-filters"
+          role="tablist"
+          aria-label="ประเภทปลายทาง LINE"
+        >
+          <button
+            class="line-target-filter is-active"
+            type="button"
+            data-line-target-filter="ALL"
+            role="tab"
+            aria-selected="true"
+          >
+            ทั้งหมด
+          </button>
+
+          <button
+            class="line-target-filter"
+            type="button"
+            data-line-target-filter="GROUP"
+            role="tab"
+            aria-selected="false"
+          >
+            กลุ่ม
+          </button>
+
+          <button
+            class="line-target-filter"
+            type="button"
+            data-line-target-filter="USER"
+            role="tab"
+            aria-selected="false"
+          >
+            บุคคล
+          </button>
+
+          <button
+            class="line-target-filter"
+            type="button"
+            data-line-target-filter="ROOM"
+            role="tab"
+            aria-selected="false"
+          >
+            ห้อง
+          </button>
+        </div>
+
+        <div class="line-target-modal-summary">
+          <span id="lineTargetResultCount">
+            0 รายการ
+          </span>
+
+          <strong id="lineTargetModalSelectedCount">
+            เลือกแล้ว 0/5
+          </strong>
+        </div>
+
+        <p
+          id="lineTargetModalMessage"
+          class="line-target-modal-message"
+          role="status"
+          hidden
+        ></p>
+      </div>
+
+      <div
+        id="lineTargetList"
+        class="line-target-modal-list"
+        role="group"
+        aria-label="รายการปลายทาง LINE ทั้งหมด"
+      >
+        <p class="line-target-empty">
+          กำลังโหลดปลายทาง LINE
+        </p>
+      </div>
+
+      <footer class="line-target-modal-footer">
+        <button
+          id="clearLineTargetDraftButton"
+          class="line-target-modal-secondary"
+          type="button"
+          disabled
+        >
+          ล้างที่เลือก
+        </button>
+
+        <button
+          id="confirmLineTargetSelectionButton"
+          class="line-target-modal-confirm"
+          type="button"
+        >
+          ยืนยันการเลือก
+        </button>
+      </footer>
+    </section>
+  </div>
+
+
   <noscript>
     <div class="noscript-message">
       หน้าเว็บนี้ต้องเปิดใช้งาน JavaScript
@@ -667,6 +864,6 @@
   <script src="./config.js?v=20260620-3"></script>
   <script src="./api.js?v=20260620-3"></script>
   <script src="./image-editor.js?v=20260620-3"></script>
-  <script src="./app.js?v=20260620-6"></script>
+  <script src="./app.js?v=20260620-7"></script>
 </body>
 </html>

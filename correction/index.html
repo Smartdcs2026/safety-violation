@@ -24,7 +24,7 @@
 
   <link
     rel="stylesheet"
-    href="../styles.css?v=20260620-correction-5"
+    href="../styles.css?v=20260620-correction-6"
   >
 </head>
 
@@ -160,7 +160,7 @@
           <button
             id="addFriendButton"
             type="button"
-            class="primary-button"
+            class="primary-button line-bot-friend-button"
             hidden
           >
             เพิ่มเพื่อน LINE BOT
@@ -332,14 +332,29 @@
           ระบบยืนยันตัวตนได้แล้ว แต่ยังไม่พบสถานะเพื่อนของ Official Account
         </p>
 
-        <button
-          id="friendWarningButton"
-          type="button"
-          class="primary-button"
-          hidden
-        >
-          เพิ่มเพื่อน LINE BOT
-        </button>
+        <div class="correction-friend-actions">
+          <button
+            id="friendWarningButton"
+            type="button"
+            class="primary-button line-bot-friend-button"
+            hidden
+          >
+            เพิ่มเพื่อน LINE BOT
+          </button>
+
+          <button
+            id="friendRecheckButton"
+            type="button"
+            class="secondary-button"
+            hidden
+          >
+            ตรวจสอบสถานะอีกครั้ง
+          </button>
+        </div>
+
+        <small class="correction-friend-help">
+          หลังเพิ่มเพื่อนแล้ว ให้กลับมาหน้านี้ ระบบจะตรวจสอบสถานะให้อัตโนมัติ
+        </small>
       </section>
 
 
@@ -796,6 +811,6 @@
 
   <script src="../config.js?v=20260620-correction-4"></script>
   <script src="../api.js?v=20260620-correction-4"></script>
-  <script src="../correction.js?v=20260620-correction-5"></script>
+  <script src="../correction.js?v=20260620-correction-6"></script>
 </body>
 </html>

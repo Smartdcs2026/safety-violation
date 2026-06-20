@@ -30,7 +30,7 @@
      * ให้นำค่าจาก LINE Developers Console มาแทนข้อความด้านล่าง
      */
     LIFF_ID:
-      'PUT_YOUR_LIFF_ID_HERE',
+      '2010443605-jWYyda1e',
 
     /*
      * ใส่ได้เมื่อต้องการแสดงปุ่มเพิ่มเพื่อน BOT

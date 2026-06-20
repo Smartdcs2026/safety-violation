@@ -10,6 +10,7 @@
  * - แสดงความคืบหน้าการเตรียมไฟล์และบันทึก
  * - ป้องกันการกดบันทึกซ้ำ
  * - รองรับภาพที่ผ่าน Image Editor
+ * - แสดงผลการส่ง Flex แยกรายปลายทางหลังบันทึก
  * - แก้ปุ่มบันทึกค้าง disabled หลังโหลดตัวเลือกสำเร็จ
  * - แก้โครงสร้างวงเล็บของ loadInitialData() ให้ถูกต้อง
  * - เปิดหน้าต่างค้นหารายชื่อกลุ่ม บุคคล และห้องทั้งหมด
@@ -316,6 +317,21 @@
         'successFlexStatus'
       );
 
+    elements.successMark =
+      document.getElementById(
+        'successMark'
+      );
+
+    elements.successDeliveryList =
+      document.getElementById(
+        'successDeliveryList'
+      );
+
+    elements.successDeliveryNote =
+      document.getElementById(
+        'successDeliveryNote'
+      );
+
     elements.submitButton =
       document.getElementById(
         'submitButton'
@@ -377,6 +393,12 @@
       'lineTargetModalSelectedCount',
       'clearLineTargetDraftButton',
       'confirmLineTargetSelectionButton',
+      'successPanel',
+      'successCaseId',
+      'successFlexStatus',
+      'successMark',
+      'successDeliveryList',
+      'successDeliveryNote',
       'submitButton',
       'loadingOverlay'
     ];
@@ -3753,7 +3775,10 @@
         data.sentCount ||
         (
           data.flexSummary &&
-          data.flexSummary.sent
+          (
+            data.flexSummary.successCount ||
+            data.flexSummary.sent
+          )
         ) ||
         0
       );
@@ -3764,10 +3789,33 @@
         data.failedCount ||
         (
           data.flexSummary &&
-          data.flexSummary.failed
+          (
+            data.flexSummary.failedCount ||
+            data.flexSummary.failed
+          )
         ) ||
         0
       );
+
+    const deliveryResults =
+      normalizeDeliveryResults(
+        data.flexResults ||
+        (
+          data.flexSummary &&
+          data.flexSummary.results
+        ) ||
+        []
+      );
+
+    elements.successPanel
+      .classList.remove(
+        'is-partial',
+        'is-failed'
+      );
+
+    elements.successMark
+      .textContent =
+      '✓';
 
     if (
       total > 0
@@ -3786,6 +3834,15 @@
       } else if (
         sent > 0
       ) {
+        elements.successPanel
+          .classList.add(
+            'is-partial'
+          );
+
+        elements.successMark
+          .textContent =
+          '!';
+
         elements.successFlexStatus
           .textContent =
           'ส่ง Flex สำเร็จ ' +
@@ -3801,6 +3858,15 @@
           );
 
       } else {
+        elements.successPanel
+          .classList.add(
+            'is-failed'
+          );
+
+        elements.successMark
+          .textContent =
+          '!';
+
         elements.successFlexStatus
           .textContent =
           'บันทึกข้อมูลแล้ว แต่ยังส่ง Flex ไม่สำเร็จ';
@@ -3814,12 +3880,278 @@
         'ส่ง Flex Message เรียบร้อยแล้ว';
 
     } else {
+      elements.successPanel
+        .classList.add(
+          'is-failed'
+        );
+
+      elements.successMark
+        .textContent =
+        '!';
+
       elements.successFlexStatus
         .textContent =
         'บันทึกข้อมูลแล้ว แต่การส่ง Flex Message ยังไม่สำเร็จ';
     }
 
+    renderDeliveryResults(
+      deliveryResults
+    );
+
+    const markFlexError =
+      String(
+        data.markFlexError ||
+        ''
+      ).trim();
+
+    if (
+      markFlexError
+    ) {
+      elements.successDeliveryNote
+        .textContent =
+        'หมายเหตุ: ส่ง Flex แล้ว แต่บันทึกผลการส่งลงชีตไม่สมบูรณ์ — ' +
+        markFlexError;
+
+      elements.successDeliveryNote.hidden =
+        false;
+
+    } else {
+      elements.successDeliveryNote
+        .textContent =
+        '';
+
+      elements.successDeliveryNote.hidden =
+        true;
+    }
+
     elements.successPanel.hidden =
+      false;
+  }
+
+
+  function normalizeDeliveryResults(
+    source
+  ) {
+    if (
+      !Array.isArray(
+        source
+      )
+    ) {
+      return [];
+    }
+
+    return source
+      .map(
+        function (
+          item,
+          index
+        ) {
+          const result =
+            item &&
+            typeof item === 'object'
+              ? item
+              : {};
+
+          const targetId =
+            String(
+              result.targetId ||
+              result.id ||
+              ''
+            ).trim();
+
+          const targetName =
+            String(
+              result.targetName ||
+              result.name ||
+              targetId ||
+              'ปลายทาง LINE'
+            ).trim();
+
+          const targetType =
+            String(
+              result.targetType ||
+              result.type ||
+              'LINE'
+            )
+              .trim()
+              .toUpperCase();
+
+          const sent =
+            result.sent === true ||
+            String(
+              result.status ||
+              ''
+            ).toUpperCase() ===
+              'SUCCESS';
+
+          return {
+            order:
+              Number(
+                result.order
+              ) ||
+              index + 1,
+
+            targetId:
+              targetId,
+
+            targetName:
+              targetName,
+
+            targetType:
+              targetType,
+
+            sent:
+              sent,
+
+            message:
+              String(
+                result.message ||
+                ''
+              ).trim()
+          };
+        }
+      )
+      .slice(
+        0,
+        MAX_LINE_TARGETS
+      );
+  }
+
+
+  function renderDeliveryResults(
+    results
+  ) {
+    elements.successDeliveryList
+      .replaceChildren();
+
+    if (
+      !Array.isArray(
+        results
+      ) ||
+      results.length < 1
+    ) {
+      elements.successDeliveryList.hidden =
+        true;
+
+      return;
+    }
+
+    results.forEach(
+      function (
+        result,
+        index
+      ) {
+        const item =
+          document.createElement(
+            'article'
+          );
+
+        item.className =
+          'success-delivery-item' +
+          (
+            result.sent
+              ? ''
+              : ' is-failed'
+          );
+
+        const order =
+          document.createElement(
+            'span'
+          );
+
+        order.className =
+          'success-delivery-order';
+
+        order.textContent =
+          String(
+            result.order ||
+            index + 1
+          );
+
+        const info =
+          document.createElement(
+            'div'
+          );
+
+        info.className =
+          'success-delivery-info';
+
+        const name =
+          document.createElement(
+            'strong'
+          );
+
+        name.textContent =
+          result.targetName;
+
+        const type =
+          document.createElement(
+            'small'
+          );
+
+        type.textContent =
+          getTargetTypeLabel(
+            result.targetType
+          ) +
+          ' LINE';
+
+        info.append(
+          name,
+          type
+        );
+
+        const status =
+          document.createElement(
+            'span'
+          );
+
+        status.className =
+          'success-delivery-status' +
+          (
+            result.sent
+              ? ''
+              : ' is-failed'
+          );
+
+        status.textContent =
+          result.sent
+            ? 'ส่งสำเร็จ'
+            : 'ไม่สำเร็จ';
+
+        item.append(
+          order,
+          info,
+          status
+        );
+
+        if (
+          !result.sent &&
+          result.message
+        ) {
+          const error =
+            document.createElement(
+              'p'
+            );
+
+          error.className =
+            'success-delivery-error';
+
+          error.textContent =
+            result.message;
+
+          item.appendChild(
+            error
+          );
+        }
+
+        elements.successDeliveryList
+          .appendChild(
+            item
+          );
+      }
+    );
+
+    elements.successDeliveryList.hidden =
       false;
   }
 
@@ -3834,6 +4166,16 @@
     elements.successPanel.hidden =
       true;
 
+    elements.successPanel
+      .classList.remove(
+        'is-partial',
+        'is-failed'
+      );
+
+    elements.successMark
+      .textContent =
+      '✓';
+
     elements.successCaseId
       .textContent =
       '';
@@ -3841,8 +4183,20 @@
     elements.successFlexStatus
       .textContent =
       '';
-  }
 
+    elements.successDeliveryList
+      .replaceChildren();
+
+    elements.successDeliveryList.hidden =
+      true;
+
+    elements.successDeliveryNote
+      .textContent =
+      '';
+
+    elements.successDeliveryNote.hidden =
+      true;
+  }
 
   function showFormError(
     message

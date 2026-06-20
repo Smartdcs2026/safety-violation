@@ -3774,3 +3774,111 @@ input[type="range"] {
     max-height: 280px;
   }
 }
+
+
+/************************************************************
+ * Closed correction summary
+ * Version: 2026.06.20-correction-5
+ ************************************************************/
+
+.correction-state-card.is-closed {
+  width: min(560px, 100%);
+  margin: 10px auto 0;
+  padding: 16px;
+  border-color: #acdca5;
+  background:
+    linear-gradient(
+      145deg,
+      #f2fbef,
+      #ffffff
+    );
+}
+
+
+.correction-state-card.is-closed
+.correction-state-actions {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1fr);
+  width: 100%;
+}
+
+
+.correction-state-card.is-closed
+.correction-state-actions
+button {
+  width: 100%;
+}
+
+
+.correction-closed-summary {
+  display: grid;
+  gap: 0;
+  margin-top: 11px;
+  overflow: hidden;
+  border: 1px solid
+    rgba(63, 135, 60, 0.18);
+  border-radius: 11px;
+  background:
+    rgba(255, 255, 255, 0.88);
+}
+
+
+.correction-closed-summary-row {
+  display: grid;
+  grid-template-columns:
+    minmax(90px, 0.7fr)
+    minmax(0, 1.3fr);
+  gap: 10px;
+  align-items: start;
+  padding: 8px 10px;
+  border-bottom: 1px solid
+    rgba(63, 135, 60, 0.12);
+}
+
+
+.correction-closed-summary-row span,
+.correction-closed-summary-detail > span {
+  color: #678064;
+  font-size: 0.62rem;
+  font-weight: 750;
+}
+
+
+.correction-closed-summary-row strong {
+  min-width: 0;
+  color: #294f2d;
+  font-size: 0.68rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+
+.correction-closed-summary-detail {
+  padding: 9px 10px 10px;
+}
+
+
+.correction-closed-summary-detail p {
+  margin: 3px 0 0;
+  color: #365f39;
+  font-size: 0.67rem;
+  line-height: 1.48;
+  overflow-wrap: anywhere;
+}
+
+
+@media (max-width: 390px) {
+  .correction-state-card.is-closed
+  .correction-state-actions {
+    grid-template-columns:
+      minmax(0, 1fr);
+  }
+
+  .correction-closed-summary-row {
+    grid-template-columns:
+      minmax(78px, 0.62fr)
+      minmax(0, 1.38fr);
+  }
+}

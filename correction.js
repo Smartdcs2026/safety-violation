@@ -1,7 +1,7 @@
 /************************************************************
  * correction.js
  * ฟอร์มแก้ไขและปิดรายการผ่าน LIFF
- * Version: 2026.06.20-correction-7
+ * Version: 2026.06.20-correction-8
  ************************************************************/
 
 (function (window, document) {
@@ -2108,15 +2108,17 @@
         'กำลังตรวจสอบผลการส่ง Flex'
       );
 
-      renderSuccess(response);
-
       state.ready =
         false;
 
       state.editable =
         false;
 
-      disableForm();
+      renderSubmitCompletedState(
+        response
+      );
+
+      clearCorrectionForm();
 
       setConnectionStatus(
         'ready',
@@ -2128,13 +2130,13 @@
         'บันทึกสำเร็จ'
       );
 
-      elements.successPanel
-        .scrollIntoView({
-          behavior:
-            'smooth',
-          block:
-            'center'
-        });
+      window.scrollTo({
+        top:
+          0,
+
+        behavior:
+          'smooth'
+      });
 
     } catch (error) {
       console.error(
@@ -2287,6 +2289,313 @@
 
     elements.submitButton.disabled =
       !complete;
+  }
+
+
+  function renderSubmitCompletedState(
+    response
+  ) {
+    const data =
+      response &&
+      response.data &&
+      typeof response.data ===
+        'object'
+        ? response.data
+        : {};
+
+    const caseId =
+      String(
+        data.caseId ||
+        (
+          state.caseData &&
+          state.caseData.caseId
+        ) ||
+        '-'
+      ).trim() || '-';
+
+    const editorName =
+      String(
+        (
+          elements.profileName &&
+          elements.profileName.textContent
+        ) ||
+        (
+          state.caseData &&
+          state.caseData.editor &&
+          state.caseData.editor.lineName
+        ) ||
+        elements.confirmerName.value ||
+        '-'
+      ).trim() || '-';
+
+    const correctedAt =
+      String(
+        data.correctedAt ||
+        data.closedAt ||
+        getCurrentDisplayDateTime()
+      ).trim();
+
+    const correctionDetail =
+      shortenClosedText(
+        elements.correctionDetail.value,
+        180
+      );
+
+    const total =
+      Number(
+        data.flexTargetCount
+      ) ||
+      (
+        Array.isArray(
+          data.flexResults
+        )
+          ? data.flexResults.length
+          : 0
+      );
+
+    const sent =
+      Number(
+        data.flexSentCount
+      ) ||
+      (
+        Array.isArray(
+          data.flexResults
+        )
+          ? data.flexResults.filter(
+              function (item) {
+                return item &&
+                  item.sent === true;
+              }
+            ).length
+          : 0
+      );
+
+    /*
+     * ซ่อนทั้งข้อมูลปัญหาเดิมและฟอร์มทันที
+     * หลัง Worker ยืนยันว่าบันทึกสำเร็จแล้ว
+     */
+    elements.correctionContent.hidden =
+      true;
+
+    elements.successPanel.hidden =
+      true;
+
+    elements.closedCaseId.textContent =
+      caseId;
+
+    elements.closedBy.textContent =
+      editorName;
+
+    elements.closedAt.textContent =
+      correctedAt;
+
+    elements.closedDetail.textContent =
+      correctionDetail || '-';
+
+    elements.closedDetailRow.hidden =
+      !correctionDetail;
+
+    elements.closedSummary.hidden =
+      false;
+
+    elements.retryButton.hidden =
+      true;
+
+    /*
+     * ผู้บันทึกต้องผ่านสถานะเพื่อน BOT ก่อนส่งฟอร์มแล้ว
+     * จึงไม่แสดงปุ่มเพิ่มเพื่อนซ้ำในหน้าสำเร็จ
+     */
+    elements.addFriendButton.hidden =
+      true;
+
+    elements.closeStateButton.hidden =
+      false;
+
+    const deliveryMessage =
+      total > 0
+        ? (
+            'บันทึกสำเร็จและส่งผลกลับ LINE ' +
+            sent +
+            '/' +
+            total +
+            ' ปลายทาง'
+          )
+        : 'บันทึกข้อมูลและปิดรายการเรียบร้อยแล้ว';
+
+    showPageMessage(
+      'closed',
+      'ดำเนินการแก้ไขเรียบร้อยแล้ว',
+      deliveryMessage
+    );
+
+    elements.pageMessage
+      .scrollIntoView({
+        behavior:
+          'smooth',
+
+        block:
+          'start'
+      });
+  }
+
+
+  function clearCorrectionForm() {
+    /*
+     * ยกเลิก URL ภาพตัวอย่างก่อนล้างไฟล์
+     * ป้องกันหน่วยความจำค้างใน LINE WebView
+     */
+    revokeAllPreviewUrls();
+
+    state.files = [
+      null,
+      null,
+      null
+    ];
+
+    state.previewUrls = [
+      '',
+      '',
+      ''
+    ];
+
+    if (elements.correctionForm) {
+      elements.correctionForm.reset();
+    }
+
+    elements.actionDetailField.hidden =
+      true;
+
+    elements.actionDetail.required =
+      false;
+
+    document
+      .querySelectorAll(
+        '.evidence-input'
+      )
+      .forEach(
+        function (input) {
+          input.value =
+            '';
+        }
+      );
+
+    document
+      .querySelectorAll(
+        '[data-preview-index]'
+      )
+      .forEach(
+        function (preview) {
+          preview.hidden =
+            true;
+        }
+      );
+
+    document
+      .querySelectorAll(
+        '[data-preview-media]'
+      )
+      .forEach(
+        function (media) {
+          media.replaceChildren();
+        }
+      );
+
+    document
+      .querySelectorAll(
+        '[data-slot-index]'
+      )
+      .forEach(
+        function (slot) {
+          const dropzone =
+            slot.querySelector(
+              '.file-dropzone'
+            );
+
+          if (dropzone) {
+            dropzone.hidden =
+              false;
+          }
+        }
+      );
+
+    elements.formError.hidden =
+      true;
+
+    elements.formError.textContent =
+      '';
+
+    elements.successPanel.hidden =
+      true;
+
+    updateCounters();
+    updateFileSummary();
+  }
+
+
+  function getCurrentDisplayDateTime() {
+    const formatter =
+      new Intl.DateTimeFormat(
+        'en-GB',
+        {
+          timeZone:
+            CONFIG.TIMEZONE ||
+            'Asia/Bangkok',
+
+          day:
+            '2-digit',
+
+          month:
+            '2-digit',
+
+          year:
+            'numeric',
+
+          hour:
+            '2-digit',
+
+          minute:
+            '2-digit',
+
+          second:
+            '2-digit',
+
+          hour12:
+            false
+        }
+      );
+
+    const parts =
+      formatter.formatToParts(
+        new Date()
+      );
+
+    const values = {};
+
+    parts.forEach(
+      function (part) {
+        if (
+          part.type !==
+          'literal'
+        ) {
+          values[part.type] =
+            part.value;
+        }
+      }
+    );
+
+    return (
+      values.day +
+      '/' +
+      values.month +
+      '/' +
+      values.year +
+      ' ' +
+      values.hour +
+      ':' +
+      values.minute +
+      ':' +
+      values.second
+    );
   }
 
 

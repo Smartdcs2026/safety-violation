@@ -515,6 +515,255 @@ textarea:disabled {
 }
 
 
+/************************************************************
+ * Multiple LINE targets
+ ************************************************************/
+
+.line-target-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+
+.line-target-label-row label {
+  margin-bottom: 0;
+}
+
+
+.line-target-limit {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.56rem;
+  font-weight: 700;
+}
+
+
+.line-target-selector {
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    opacity 0.15s;
+}
+
+
+.line-target-selector:focus-within {
+  border-color: var(--brand-blue);
+  box-shadow:
+    0 0 0 3px
+    rgba(71, 117, 199, 0.11);
+}
+
+
+.line-target-selector.is-loading,
+.line-target-selector.is-disabled {
+  opacity: 0.68;
+  background: #f1f3f7;
+}
+
+
+.line-target-toolbar {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 7px;
+  border-bottom: 1px solid var(--border);
+  background:
+    linear-gradient(
+      180deg,
+      #f8faff,
+      #f1f5fb
+    );
+}
+
+
+.line-target-toolbar strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #2a3b5d;
+  font-size: 0.65rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+.line-target-clear-button {
+  flex: 0 0 auto;
+  min-height: 25px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--brand-blue-dark);
+  background: var(--brand-blue-soft);
+  font-size: 0.58rem;
+  font-weight: 800;
+}
+
+
+.line-target-list {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  max-height: 178px;
+  padding: 6px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+
+.line-target-option {
+  position: relative;
+  display: grid;
+  grid-template-columns:
+    18px
+    minmax(0, 1fr);
+  min-width: 0;
+  min-height: 49px;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: #ffffff;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    transform 0.15s;
+}
+
+
+.line-target-option:active {
+  transform: scale(0.985);
+}
+
+
+.line-target-option.is-selected {
+  border-color: var(--brand-blue);
+  background: var(--brand-blue-soft);
+  box-shadow:
+    inset 0 0 0 1px
+    rgba(71, 117, 199, 0.08);
+}
+
+
+.line-target-option.is-unavailable {
+  opacity: 0.52;
+  cursor: not-allowed;
+}
+
+
+.line-target-checkbox {
+  width: 18px !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  margin: 0;
+  padding: 0 !important;
+  accent-color: var(--brand-blue);
+}
+
+
+.line-target-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+
+.line-target-name {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: #273753;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+.line-target-type {
+  width: max-content;
+  max-width: 100%;
+  padding: 1px 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  color: #526078;
+  background: #edf1f7;
+  font-size: 0.49rem;
+  font-weight: 800;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+.line-target-option.is-selected
+.line-target-type {
+  color: var(--brand-blue-dark);
+  background: #ffffff;
+}
+
+
+.line-target-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 13px 8px;
+  color: var(--muted);
+  font-size: 0.62rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+
+@media (max-width: 350px) {
+  .line-target-list {
+    grid-template-columns:
+      minmax(0, 1fr);
+    max-height: 190px;
+  }
+}
+
+
+@media (min-width: 640px) {
+  .line-target-list {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+    max-height: 210px;
+    gap: 7px;
+    padding: 8px;
+  }
+
+  .line-target-option {
+    min-height: 56px;
+    padding: 8px;
+  }
+
+  .line-target-name {
+    font-size: 0.7rem;
+  }
+
+  .line-target-type {
+    font-size: 0.55rem;
+  }
+}
+
+
 .field-footer {
   display: flex;
   justify-content: space-between;

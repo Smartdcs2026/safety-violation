@@ -24,7 +24,7 @@
 
   <link
     rel="stylesheet"
-    href="../styles.css?v=20260620-correction-4"
+    href="../styles.css?v=20260620-correction-5"
   >
 </head>
 
@@ -117,6 +117,36 @@
         </h2>
 
         <p id="pageMessageText"></p>
+
+        <div
+          id="closedSummary"
+          class="correction-closed-summary"
+          hidden
+        >
+          <div class="correction-closed-summary-row">
+            <span>รหัสรายการ</span>
+            <strong id="closedCaseId">-</strong>
+          </div>
+
+          <div class="correction-closed-summary-row">
+            <span>ดำเนินการโดย</span>
+            <strong id="closedBy">-</strong>
+          </div>
+
+          <div class="correction-closed-summary-row">
+            <span>ปิดงานเมื่อ</span>
+            <strong id="closedAt">-</strong>
+          </div>
+
+          <div
+            id="closedDetailRow"
+            class="correction-closed-summary-detail"
+            hidden
+          >
+            <span>สรุปการแก้ไข</span>
+            <p id="closedDetail">-</p>
+          </div>
+        </div>
 
         <div class="correction-state-actions">
           <button
@@ -766,6 +796,6 @@
 
   <script src="../config.js?v=20260620-correction-4"></script>
   <script src="../api.js?v=20260620-correction-4"></script>
-  <script src="../correction.js?v=20260620-correction-4"></script>
+  <script src="../correction.js?v=20260620-correction-5"></script>
 </body>
 </html>

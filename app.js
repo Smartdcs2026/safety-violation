@@ -12,6 +12,8 @@
  * - รองรับภาพที่ผ่าน Image Editor
  * - แก้ปุ่มบันทึกค้าง disabled หลังโหลดตัวเลือกสำเร็จ
  * - แก้โครงสร้างวงเล็บของ loadInitialData() ให้ถูกต้อง
+ * - เลือกปลายทาง LINE ได้หลายรายการ สูงสุด 5 ปลายทาง
+ * - ส่ง lineTargets พร้อมคงข้อมูลปลายทางแรกเพื่อรองรับระบบเดิม
  ************************************************************/
 
 (function (window, document) {
@@ -37,6 +39,14 @@
 
   const LOAD_RETRY_DELAY_MS =
     900;
+
+  const MAX_LINE_TARGETS =
+    Math.max(
+      1,
+      Number(
+        CONFIG.MAX_LINE_TARGETS
+      ) || 5
+    );
 
   const state = {
     initialized:
@@ -65,6 +75,9 @@
 
     options:
       null,
+
+    selectedLineTargetIds:
+      new Set(),
 
     readinessErrors:
       []
@@ -160,6 +173,31 @@
         'lineTarget'
       );
 
+    elements.lineTargetSelector =
+      document.getElementById(
+        'lineTargetSelector'
+      );
+
+    elements.lineTargetList =
+      document.getElementById(
+        'lineTargetList'
+      );
+
+    elements.lineTargetSummary =
+      document.getElementById(
+        'lineTargetSummary'
+      );
+
+    elements.lineTargetLimit =
+      document.getElementById(
+        'lineTargetLimit'
+      );
+
+    elements.clearLineTargetsButton =
+      document.getElementById(
+        'clearLineTargetsButton'
+      );
+
     elements.unsafeActionCounter =
       document.getElementById(
         'unsafeActionCounter'
@@ -241,6 +279,10 @@
       'unsafeActionType',
       'problemDetail',
       'lineTarget',
+      'lineTargetSelector',
+      'lineTargetList',
+      'lineTargetSummary',
+      'clearLineTargetsButton',
       'submitButton',
       'loadingOverlay'
     ];
@@ -317,8 +359,7 @@
     [
       elements.workShift,
       elements.osm,
-      elements.otm,
-      elements.lineTarget
+      elements.otm
     ].forEach(
       function (select) {
         select.addEventListener(
@@ -331,6 +372,22 @@
         );
       }
     );
+
+    elements.lineTargetList
+      .addEventListener(
+        'change',
+        handleLineTargetChange
+      );
+
+    elements.clearLineTargetsButton
+      .addEventListener(
+        'click',
+        function () {
+          clearLineTargetSelection(
+            true
+          );
+        }
+      );
 
     document
       .querySelectorAll(
@@ -421,9 +478,8 @@
       'กำลังโหลด'
     );
 
-    setSelectLoading(
-      elements.lineTarget,
-      'กำลังโหลด LINE'
+    setLineTargetLoading(
+      'กำลังโหลดปลายทาง LINE'
     );
 
     showLoading(
@@ -962,58 +1018,409 @@
   function populateLineTargets(
     targets
   ) {
-    elements.lineTarget
-      .replaceChildren();
+    const list =
+      Array.isArray(
+        targets
+      )
+        ? targets
+        : [];
 
-    const firstOption =
-      document.createElement(
-        'option'
-      );
+    state.selectedLineTargetIds
+      .clear();
 
-    firstOption.value =
+    elements.lineTarget.value =
       '';
 
-    firstOption.textContent =
-      targets.length > 0
-        ? 'เลือกปลายทาง LINE'
-        : 'ยังไม่พบปลายทาง LINE';
+    elements.lineTargetList
+      .replaceChildren();
 
-    elements.lineTarget.appendChild(
-      firstOption
-    );
+    elements.lineTargetSelector
+      .classList.remove(
+        'is-loading',
+        'is-disabled'
+      );
 
-    targets.forEach(
-      function (target) {
-        const option =
+    elements.lineTargetSelector
+      .setAttribute(
+        'aria-busy',
+        'false'
+      );
+
+    if (
+      elements.lineTargetLimit
+    ) {
+      elements.lineTargetLimit
+        .textContent =
+        'เลือกได้สูงสุด ' +
+        MAX_LINE_TARGETS;
+    }
+
+    if (
+      list.length < 1
+    ) {
+      const empty =
+        document.createElement(
+          'p'
+        );
+
+      empty.className =
+        'line-target-empty';
+
+      empty.textContent =
+        'ยังไม่พบปลายทาง LINE';
+
+      elements.lineTargetList
+        .appendChild(
+          empty
+        );
+
+      elements.lineTargetSelector
+        .classList.add(
+          'is-disabled'
+        );
+
+      updateLineTargetSelectionUi();
+      return;
+    }
+
+    list.forEach(
+      function (
+        target,
+        index
+      ) {
+        const label =
           document.createElement(
-            'option'
+            'label'
           );
 
-        option.value =
+        label.className =
+          'line-target-option';
+
+        label.dataset.targetId =
           target.id;
 
-        option.textContent =
+        const checkbox =
+          document.createElement(
+            'input'
+          );
+
+        checkbox.type =
+          'checkbox';
+
+        checkbox.className =
+          'line-target-checkbox';
+
+        checkbox.value =
+          target.id;
+
+        checkbox.dataset.lineTargetId =
+          target.id;
+
+        checkbox.id =
+          'lineTargetOption' +
+          index;
+
+        const copy =
+          document.createElement(
+            'span'
+          );
+
+        copy.className =
+          'line-target-copy';
+
+        const name =
+          document.createElement(
+            'span'
+          );
+
+        name.className =
+          'line-target-name';
+
+        name.textContent =
+          target.name;
+
+        const type =
+          document.createElement(
+            'span'
+          );
+
+        type.className =
+          'line-target-type';
+
+        type.textContent =
           getTargetTypeLabel(
             target.type
-          ) +
-          ' - ' +
-          target.name;
+          );
 
-        option.dataset.targetType =
-          target.type;
+        copy.append(
+          name,
+          type
+        );
 
-        option.dataset.targetName =
-          target.name;
+        label.append(
+          checkbox,
+          copy
+        );
 
-        elements.lineTarget
+        elements.lineTargetList
           .appendChild(
-            option
+            label
           );
       }
     );
 
-    elements.lineTarget.disabled =
-      targets.length < 1;
+    updateLineTargetSelectionUi();
+  }
+
+
+  function setLineTargetLoading(
+    text
+  ) {
+    state.selectedLineTargetIds
+      .clear();
+
+    elements.lineTarget.value =
+      '';
+
+    elements.lineTargetList
+      .replaceChildren();
+
+    const empty =
+      document.createElement(
+        'p'
+      );
+
+    empty.className =
+      'line-target-empty';
+
+    empty.textContent =
+      text ||
+      'กำลังโหลดปลายทาง LINE';
+
+    elements.lineTargetList
+      .appendChild(
+        empty
+      );
+
+    elements.lineTargetSummary
+      .textContent =
+      text ||
+      'กำลังโหลดปลายทาง LINE';
+
+    elements.lineTargetSelector
+      .classList.add(
+        'is-loading'
+      );
+
+    elements.lineTargetSelector
+      .setAttribute(
+        'aria-busy',
+        'true'
+      );
+
+    elements.clearLineTargetsButton
+      .disabled =
+      true;
+  }
+
+
+  function handleLineTargetChange(
+    event
+  ) {
+    const checkbox =
+      event.target &&
+      event.target.matches(
+        '[data-line-target-id]'
+      )
+        ? event.target
+        : null;
+
+    if (!checkbox) {
+      return;
+    }
+
+    const targetId =
+      String(
+        checkbox.dataset
+          .lineTargetId ||
+        checkbox.value ||
+        ''
+      ).trim();
+
+    if (!targetId) {
+      checkbox.checked =
+        false;
+
+      return;
+    }
+
+    if (
+      checkbox.checked
+    ) {
+      if (
+        state
+          .selectedLineTargetIds
+          .size >=
+        MAX_LINE_TARGETS
+      ) {
+        checkbox.checked =
+          false;
+
+        showFormError(
+          'เลือกปลายทาง LINE ได้สูงสุด ' +
+          MAX_LINE_TARGETS +
+          ' ปลายทาง'
+        );
+
+        return;
+      }
+
+      state
+        .selectedLineTargetIds
+        .add(
+          targetId
+        );
+
+    } else {
+      state
+        .selectedLineTargetIds
+        .delete(
+          targetId
+        );
+    }
+
+    clearFormError();
+    clearSuccess();
+    updateLineTargetSelectionUi();
+    updateSubmitAvailability();
+  }
+
+
+  function updateLineTargetSelectionUi() {
+    const selectedCount =
+      state
+        .selectedLineTargetIds
+        .size;
+
+    const maximumReached =
+      selectedCount >=
+      MAX_LINE_TARGETS;
+
+    const checkboxes =
+      elements.lineTargetList
+        .querySelectorAll(
+          '[data-line-target-id]'
+        );
+
+    checkboxes.forEach(
+      function (checkbox) {
+        const targetId =
+          String(
+            checkbox.dataset
+              .lineTargetId ||
+            checkbox.value ||
+            ''
+          ).trim();
+
+        const selected =
+          state
+            .selectedLineTargetIds
+            .has(
+              targetId
+            );
+
+        checkbox.checked =
+          selected;
+
+        checkbox.disabled =
+          !selected &&
+          maximumReached;
+
+        const option =
+          checkbox.closest(
+            '.line-target-option'
+          );
+
+        if (option) {
+          option.classList.toggle(
+            'is-selected',
+            selected
+          );
+
+          option.classList.toggle(
+            'is-unavailable',
+            checkbox.disabled
+          );
+        }
+      }
+    );
+
+    const firstTarget =
+      getSelectedLineTargets()[0] ||
+      null;
+
+    elements.lineTarget.value =
+      firstTarget
+        ? firstTarget.id
+        : '';
+
+    elements.lineTargetSummary
+      .textContent =
+      selectedCount > 0
+        ? (
+            'เลือกแล้ว ' +
+            selectedCount +
+            '/' +
+            MAX_LINE_TARGETS +
+            ' ปลายทาง'
+          )
+        : 'ยังไม่ได้เลือกปลายทาง LINE';
+
+    elements.clearLineTargetsButton
+      .disabled =
+      selectedCount < 1;
+  }
+
+
+  function getSelectedLineTargets() {
+    const available =
+      state.options &&
+      Array.isArray(
+        state.options.lineTargets
+      )
+        ? state.options.lineTargets
+        : [];
+
+    return available.filter(
+      function (target) {
+        return state
+          .selectedLineTargetIds
+          .has(
+            target.id
+          );
+      }
+    );
+  }
+
+
+  function clearLineTargetSelection(
+    notifyChange
+  ) {
+    state.selectedLineTargetIds
+      .clear();
+
+    elements.lineTarget.value =
+      '';
+
+    updateLineTargetSelectionUi();
+
+    if (
+      notifyChange !== false
+    ) {
+      clearFormError();
+      clearSuccess();
+      updateSubmitAvailability();
+    }
   }
 
 
@@ -1784,18 +2191,19 @@
         'กำลังจัดเตรียมข้อมูล'
       );
 
-      const selectedTarget =
-        elements.lineTarget
-          .selectedOptions[0];
+      const selectedTargets =
+        getSelectedLineTargets();
 
       if (
-        !selectedTarget ||
-        !elements.lineTarget.value
+        selectedTargets.length < 1
       ) {
         throw new Error(
-          'กรุณาเลือกปลายทาง LINE'
+          'กรุณาเลือกปลายทาง LINE อย่างน้อย 1 ปลายทาง'
         );
       }
+
+      const primaryTarget =
+        selectedTargets[0];
 
       const payload = {
         requestId:
@@ -1822,21 +2230,35 @@
             .value
             .trim(),
 
+        /*
+         * lineTargets คือโครงสร้างใหม่สำหรับส่งหลายปลายทาง
+         * ส่วน lineTargetType/Id/Name เก็บปลายทางแรก
+         * เพื่อให้ระบบเดิมยังอ่านข้อมูลได้
+         */
+        lineTargets:
+          selectedTargets.map(
+            function (target) {
+              return {
+                type:
+                  target.type,
+
+                id:
+                  target.id,
+
+                name:
+                  target.name
+              };
+            }
+          ),
+
         lineTargetType:
-          selectedTarget
-            .dataset
-            .targetType ||
-          '',
+          primaryTarget.type,
 
         lineTargetId:
-          elements.lineTarget.value,
+          primaryTarget.id,
 
         lineTargetName:
-          selectedTarget
-            .dataset
-            .targetName ||
-          selectedTarget.textContent ||
-          '',
+          primaryTarget.name,
 
         evidenceFiles:
           evidenceFiles
@@ -1844,7 +2266,9 @@
 
       updateProgress(
         72,
-        'กำลังอัปโหลดไฟล์ไปยัง Google Drive'
+        'กำลังอัปโหลดไฟล์ และเตรียมส่ง ' +
+        selectedTargets.length +
+        ' ปลายทาง'
       );
 
       const response =
@@ -1946,13 +2370,6 @@
       },
       {
         element:
-          elements.lineTarget,
-
-        name:
-          'ปลายทาง LINE'
-      },
-      {
-        element:
           elements.unsafeActionType,
 
         name:
@@ -1985,6 +2402,37 @@
           item.name
         );
       }
+    }
+
+    const selectedTargets =
+      getSelectedLineTargets();
+
+    if (
+      selectedTargets.length < 1
+    ) {
+      elements.lineTargetSelector
+        .scrollIntoView({
+          behavior:
+            'smooth',
+
+          block:
+            'center'
+        });
+
+      throw new Error(
+        'กรุณาเลือกปลายทาง LINE อย่างน้อย 1 ปลายทาง'
+      );
+    }
+
+    if (
+      selectedTargets.length >
+      MAX_LINE_TARGETS
+    ) {
+      throw new Error(
+        'เลือกปลายทาง LINE ได้สูงสุด ' +
+        MAX_LINE_TARGETS +
+        ' ปลายทาง'
+      );
     }
 
     const selectedFiles =
@@ -2116,7 +2564,77 @@
       data.caseId ||
       '-';
 
+    const total =
+      Number(
+        data.flexTargetCount ||
+        data.targetCount ||
+        (
+          data.flexSummary &&
+          data.flexSummary.total
+        ) ||
+        0
+      );
+
+    const sent =
+      Number(
+        data.flexSentCount ||
+        data.sentCount ||
+        (
+          data.flexSummary &&
+          data.flexSummary.sent
+        ) ||
+        0
+      );
+
+    const failed =
+      Number(
+        data.flexFailedCount ||
+        data.failedCount ||
+        (
+          data.flexSummary &&
+          data.flexSummary.failed
+        ) ||
+        0
+      );
+
     if (
+      total > 0
+    ) {
+      if (
+        sent === total
+      ) {
+        elements.successFlexStatus
+          .textContent =
+          'ส่ง Flex Message สำเร็จ ' +
+          sent +
+          '/' +
+          total +
+          ' ปลายทาง';
+
+      } else if (
+        sent > 0
+      ) {
+        elements.successFlexStatus
+          .textContent =
+          'ส่ง Flex สำเร็จ ' +
+          sent +
+          '/' +
+          total +
+          ' ปลายทาง' +
+          (
+            failed > 0
+              ? ' · ไม่สำเร็จ ' +
+                failed
+              : ''
+          );
+
+      } else {
+        elements.successFlexStatus
+          .textContent =
+          'บันทึกข้อมูลแล้ว แต่ยังส่ง Flex ไม่สำเร็จ';
+      }
+
+    } else if (
       data.flexSent === true
     ) {
       elements.successFlexStatus
@@ -2217,10 +2735,14 @@
 
   function resetFormAfterSuccessfulSubmit() {
     /*
-     * ล้างค่าช่องกรอกและคืน select ไปยังตัวเลือกแรก
+     * ล้างค่าช่องกรอกและปลายทาง LINE
      * แต่ไม่ล้างกล่องข้อความสำเร็จ เพื่อให้ผู้ใช้เห็นรหัสปัญหา
      */
     elements.form.reset();
+
+    clearLineTargetSelection(
+      false
+    );
 
     resetEvidenceFiles();
 
@@ -2360,7 +2882,7 @@
       !elements.workShift ||
       !elements.osm ||
       !elements.otm ||
-      !elements.lineTarget ||
+      !elements.lineTargetSelector ||
       !elements.unsafeActionType ||
       !elements.problemDetail
     ) {
@@ -2371,7 +2893,6 @@
       elements.workShift.value,
       elements.osm.value,
       elements.otm.value,
-      elements.lineTarget.value,
       elements.unsafeActionType.value,
       elements.problemDetail.value
     ];
@@ -2387,6 +2908,10 @@
         }
       );
 
+    const hasLineTarget =
+      getSelectedLineTargets()
+        .length > 0;
+
     const hasEvidence =
       state.files.some(
         Boolean
@@ -2394,6 +2919,7 @@
 
     return (
       fieldsComplete &&
+      hasLineTarget &&
       hasEvidence
     );
   }

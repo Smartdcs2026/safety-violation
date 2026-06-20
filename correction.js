@@ -1,6 +1,7 @@
 /************************************************************
  * correction.js
  * ฟอร์มแก้ไขและปิดรายการผ่าน LIFF
+ * Version: 2026.06.20-correction-5
  ************************************************************/
 
 (function (window, document) {
@@ -113,6 +114,12 @@
       'pageMessageIcon',
       'pageMessageTitle',
       'pageMessageText',
+      'closedSummary',
+      'closedCaseId',
+      'closedBy',
+      'closedAt',
+      'closedDetailRow',
+      'closedDetail',
       'retryButton',
       'addFriendButton',
       'closeStateButton',
@@ -331,6 +338,8 @@
     );
 
     hidePageMessage();
+    resetClosedSummary();
+
     elements.correctionContent.hidden =
       true;
 
@@ -392,22 +401,14 @@
       }
 
       updateProgress(
-        28,
+        30,
         'กำลังตรวจสอบระบบ'
       );
 
       await API.health();
 
       updateProgress(
-        42,
-        'กำลังโหลดรายชื่อ OSM และ OTM'
-      );
-
-      state.options =
-        await API.getOptions();
-
-      updateProgress(
-        58,
+        50,
         'กำลังยืนยันตัวตนและตรวจลิงก์'
       );
 
@@ -463,7 +464,85 @@
         verifiedProfile.friendshipStatus === true ||
         String(
           verifiedProfile.friendshipStatus || ''
-        ).toLowerCase() === 'true';
+        ).toLowerCase() === 'true' ||
+        String(
+          verifiedProfile.friendshipStatus || ''
+        ).trim() === 'เป็นเพื่อนแล้ว';
+
+      /*
+       * รายการที่ปิดงานแล้ว:
+       * - ไม่โหลดรายชื่อ OSM/OTM
+       * - ไม่สร้างหรือแสดงฟอร์ม
+       * - แสดงเพียงข้อมูลสรุปสั้น ๆ และปุ่มที่จำเป็น
+       */
+      if (
+        !state.editable &&
+        isCaseClosed(
+          state.caseData
+        )
+      ) {
+        state.ready =
+          false;
+
+        elements.correctionContent.hidden =
+          true;
+
+        renderClosedState(
+          state.caseData
+        );
+
+        setConnectionStatus(
+          'ready',
+          'ปิดงานแล้ว'
+        );
+
+        updateProgress(
+          100,
+          'รายการปิดงานแล้ว'
+        );
+
+        return;
+      }
+
+      /*
+       * ลิงก์ใช้ไม่ได้ แต่รายการยังไม่ปิด:
+       * ไม่ควรแสดงฟอร์ม เพื่อป้องกันความสับสน
+       */
+      if (!state.editable) {
+        state.ready =
+          false;
+
+        elements.correctionContent.hidden =
+          true;
+
+        resetClosedSummary();
+
+        setConnectionStatus(
+          'error',
+          'ลิงก์ใช้ไม่ได้'
+        );
+
+        showPageMessage(
+          'error',
+          'ไม่สามารถใช้ลิงก์นี้ได้',
+          'ลิงก์แก้ไขถูกปิดหรือไม่อยู่ในสถานะพร้อมใช้งาน'
+        );
+
+        updateProgress(
+          100,
+          'ลิงก์ใช้ไม่ได้'
+        );
+
+        return;
+      }
+
+      updateProgress(
+        66,
+        'กำลังโหลดรายชื่อ OSM และ OTM'
+      );
+
+      state.options =
+        await API.getOptions();
 
       state.submissionId =
         getOrCreateSubmissionId(
@@ -471,7 +550,7 @@
         );
 
       updateProgress(
-        78,
+        80,
         'กำลังจัดเตรียมข้อมูลรายการ'
       );
 
@@ -494,32 +573,17 @@
       elements.correctionContent.hidden =
         false;
 
-      if (!state.editable) {
-        state.ready =
-          false;
+      state.ready =
+        true;
 
-        disableForm();
-
-        showPageMessage(
-          'closed',
-          'รายการนี้ปิดงานแล้ว',
-          'ลิงก์แก้ไขถูกใช้หรือรายการได้รับการแก้ไขเรียบร้อยแล้ว'
-        );
-      } else {
-        state.ready =
-          true;
-
-        setConnectionStatus(
-          'ready',
-          'พร้อมแก้ไข'
-        );
-      }
+      setConnectionStatus(
+        'ready',
+        'พร้อมแก้ไข'
+      );
 
       updateProgress(
         100,
-        state.editable
-          ? 'พร้อมดำเนินการ'
-          : 'รายการปิดแล้ว'
+        'พร้อมดำเนินการ'
       );
 
       updateSubmitAvailability();
@@ -532,6 +596,11 @@
 
       state.ready =
         false;
+
+      elements.correctionContent.hidden =
+        true;
+
+      resetClosedSummary();
 
       setConnectionStatus(
         'error',
@@ -2325,11 +2394,218 @@
   }
 
 
+  function isCaseClosed(
+    caseData
+  ) {
+    const data =
+      caseData &&
+      typeof caseData ===
+        'object'
+        ? caseData
+        : {};
+
+    const correction =
+      data.correction &&
+      typeof data.correction ===
+        'object'
+        ? data.correction
+        : {};
+
+    const status =
+      String(
+        data.status || ''
+      ).trim();
+
+    return Boolean(
+      correction.correctedAt ||
+      data.closedAt ||
+      correction.correctionDetail ||
+      status.indexOf(
+        'ปิด'
+      ) !== -1 ||
+      status.indexOf(
+        'แก้ไข'
+      ) !== -1 ||
+      status.toLowerCase() ===
+        'closed' ||
+      status.toLowerCase() ===
+        'completed'
+    );
+  }
+
+
+  function renderClosedState(
+    caseData
+  ) {
+    const data =
+      caseData &&
+      typeof caseData ===
+        'object'
+        ? caseData
+        : {};
+
+    const correction =
+      data.correction &&
+      typeof data.correction ===
+        'object'
+        ? data.correction
+        : {};
+
+    const editor =
+      data.editor &&
+      typeof data.editor ===
+        'object'
+        ? data.editor
+        : {};
+
+    const closedBy =
+      String(
+        editor.lineName ||
+        correction.confirmerName ||
+        '-'
+      ).trim() || '-';
+
+    const closedAt =
+      String(
+        correction.correctedAt ||
+        data.closedAt ||
+        '-'
+      ).trim() || '-';
+
+    const detailParts = [
+      correction.correctionDetail,
+      correction.actionTaken === 'ใช่'
+        ? correction.actionDetail
+        : ''
+    ]
+      .map(
+        function (value) {
+          return String(
+            value || ''
+          ).trim();
+        }
+      )
+      .filter(Boolean);
+
+    const detail =
+      shortenClosedText(
+        detailParts.join(' · '),
+        220
+      );
+
+    elements.closedCaseId.textContent =
+      String(
+        data.caseId || '-'
+      );
+
+    elements.closedBy.textContent =
+      closedBy;
+
+    elements.closedAt.textContent =
+      closedAt;
+
+    elements.closedDetail.textContent =
+      detail || '-';
+
+    elements.closedDetailRow.hidden =
+      !detail;
+
+    elements.closedSummary.hidden =
+      false;
+
+    /*
+     * หน้าปิดงานต้องเหลือเพียง:
+     * - เพิ่มเพื่อน LINE BOT
+     * - ปิดหน้านี้
+     */
+    elements.retryButton.hidden =
+      true;
+
+    elements.addFriendButton.hidden =
+      !normalizeHttpsUrl(
+        CONFIG.LINE_BOT_FRIEND_URL
+      );
+
+    elements.closeStateButton.hidden =
+      false;
+
+    showPageMessage(
+      'closed',
+      'รายการนี้ปิดงานแล้ว',
+      'รายการนี้ได้รับการแก้ไขเรียบร้อยแล้ว ไม่ต้องดำเนินการซ้ำ'
+    );
+  }
+
+
+  function resetClosedSummary() {
+    if (!elements.closedSummary) {
+      return;
+    }
+
+    elements.closedSummary.hidden =
+      true;
+
+    elements.closedCaseId.textContent =
+      '-';
+
+    elements.closedBy.textContent =
+      '-';
+
+    elements.closedAt.textContent =
+      '-';
+
+    elements.closedDetail.textContent =
+      '-';
+
+    elements.closedDetailRow.hidden =
+      true;
+  }
+
+
+  function shortenClosedText(
+    value,
+    maximumLength
+  ) {
+    const text =
+      String(
+        value || ''
+      ).trim();
+
+    const limit =
+      Number(
+        maximumLength
+      ) || 220;
+
+    if (
+      !text ||
+      text.length <= limit
+    ) {
+      return text;
+    }
+
+    return (
+      text.substring(
+        0,
+        limit - 1
+      ) +
+      '…'
+    );
+  }
+
+
   function showPageMessage(
     type,
     title,
     message
   ) {
+    if (
+      type !== 'closed' &&
+      elements.closedSummary
+    ) {
+      elements.closedSummary.hidden =
+        true;
+    }
+
     elements.pageMessage.className =
       'correction-state-card is-' +
       type;

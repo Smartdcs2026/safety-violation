@@ -12,7 +12,8 @@
  * - รองรับภาพที่ผ่าน Image Editor
  * - แก้ปุ่มบันทึกค้าง disabled หลังโหลดตัวเลือกสำเร็จ
  * - แก้โครงสร้างวงเล็บของ loadInitialData() ให้ถูกต้อง
- * - เลือกปลายทาง LINE ได้หลายรายการ สูงสุด 5 ปลายทาง
+ * - เปิดหน้าต่างค้นหารายชื่อกลุ่ม บุคคล และห้องทั้งหมด
+ * - เลือกและจัดลำดับปลายทาง LINE ได้สูงสุด 5 รายการ
  * - ส่ง lineTargets พร้อมคงข้อมูลปลายทางแรกเพื่อรองรับระบบเดิม
  ************************************************************/
 
@@ -77,7 +78,19 @@
       null,
 
     selectedLineTargetIds:
-      new Set(),
+      [],
+
+    lineTargetDraftIds:
+      [],
+
+    lineTargetFilter:
+      'ALL',
+
+    lineTargetSearch:
+      '',
+
+    lineTargetModalOpen:
+      false,
 
     readinessErrors:
       []
@@ -178,6 +191,16 @@
         'lineTargetSelector'
       );
 
+    elements.openLineTargetPickerButton =
+      document.getElementById(
+        'openLineTargetPickerButton'
+      );
+
+    elements.selectedLineTargetList =
+      document.getElementById(
+        'selectedLineTargetList'
+      );
+
     elements.lineTargetList =
       document.getElementById(
         'lineTargetList'
@@ -193,9 +216,69 @@
         'lineTargetLimit'
       );
 
+    elements.lineTargetSelectionHint =
+      document.getElementById(
+        'lineTargetSelectionHint'
+      );
+
     elements.clearLineTargetsButton =
       document.getElementById(
         'clearLineTargetsButton'
+      );
+
+    elements.lineTargetModal =
+      document.getElementById(
+        'lineTargetModal'
+      );
+
+    elements.lineTargetModalBackdrop =
+      document.getElementById(
+        'lineTargetModalBackdrop'
+      );
+
+    elements.closeLineTargetModalButton =
+      document.getElementById(
+        'closeLineTargetModalButton'
+      );
+
+    elements.lineTargetSearch =
+      document.getElementById(
+        'lineTargetSearch'
+      );
+
+    elements.clearLineTargetSearchButton =
+      document.getElementById(
+        'clearLineTargetSearchButton'
+      );
+
+    elements.lineTargetFilters =
+      document.getElementById(
+        'lineTargetFilters'
+      );
+
+    elements.lineTargetResultCount =
+      document.getElementById(
+        'lineTargetResultCount'
+      );
+
+    elements.lineTargetModalSelectedCount =
+      document.getElementById(
+        'lineTargetModalSelectedCount'
+      );
+
+    elements.lineTargetModalMessage =
+      document.getElementById(
+        'lineTargetModalMessage'
+      );
+
+    elements.clearLineTargetDraftButton =
+      document.getElementById(
+        'clearLineTargetDraftButton'
+      );
+
+    elements.confirmLineTargetSelectionButton =
+      document.getElementById(
+        'confirmLineTargetSelectionButton'
       );
 
     elements.unsafeActionCounter =
@@ -280,9 +363,20 @@
       'problemDetail',
       'lineTarget',
       'lineTargetSelector',
+      'openLineTargetPickerButton',
+      'selectedLineTargetList',
       'lineTargetList',
       'lineTargetSummary',
       'clearLineTargetsButton',
+      'lineTargetModal',
+      'lineTargetModalBackdrop',
+      'closeLineTargetModalButton',
+      'lineTargetSearch',
+      'lineTargetFilters',
+      'lineTargetResultCount',
+      'lineTargetModalSelectedCount',
+      'clearLineTargetDraftButton',
+      'confirmLineTargetSelectionButton',
       'submitButton',
       'loadingOverlay'
     ];
@@ -373,10 +467,82 @@
       }
     );
 
+    elements.openLineTargetPickerButton
+      .addEventListener(
+        'click',
+        openLineTargetModal
+      );
+
+    elements.lineTargetModalBackdrop
+      .addEventListener(
+        'click',
+        function () {
+          closeLineTargetModal(
+            false
+          );
+        }
+      );
+
+    elements.closeLineTargetModalButton
+      .addEventListener(
+        'click',
+        function () {
+          closeLineTargetModal(
+            false
+          );
+        }
+      );
+
+    elements.confirmLineTargetSelectionButton
+      .addEventListener(
+        'click',
+        function () {
+          closeLineTargetModal(
+            true
+          );
+        }
+      );
+
+    elements.lineTargetSearch
+      .addEventListener(
+        'input',
+        handleLineTargetSearch
+      );
+
+    elements.clearLineTargetSearchButton
+      .addEventListener(
+        'click',
+        clearLineTargetSearch
+      );
+
+    elements.lineTargetFilters
+      .addEventListener(
+        'click',
+        handleLineTargetFilterClick
+      );
+
     elements.lineTargetList
       .addEventListener(
         'change',
-        handleLineTargetChange
+        handleLineTargetDraftChange
+      );
+
+    elements.selectedLineTargetList
+      .addEventListener(
+        'click',
+        handleSelectedLineTargetAction
+      );
+
+    elements.clearLineTargetDraftButton
+      .addEventListener(
+        'click',
+        function () {
+          state.lineTargetDraftIds =
+            [];
+
+          clearLineTargetModalMessage();
+          renderLineTargetModalList();
+        }
       );
 
     elements.clearLineTargetsButton
@@ -388,6 +554,11 @@
           );
         }
       );
+
+    document.addEventListener(
+      'keydown',
+      handleLineTargetModalKeydown
+    );
 
     document
       .querySelectorAll(
@@ -916,32 +1087,103 @@
 
         seen.add(id);
 
+        const type =
+          String(
+            target.type ||
+            target.targetType ||
+            'LINE'
+          )
+            .trim()
+            .toUpperCase();
+
+        const name =
+          String(
+            target.name ||
+            target.displayName ||
+            target.targetName ||
+            id
+          ).trim();
+
+        const pictureUrl =
+          String(
+            target.pictureUrl ||
+            target.imageUrl ||
+            ''
+          ).trim();
+
+        const botStatus =
+          String(
+            target.botStatus ||
+            target.status ||
+            ''
+          ).trim();
+
+        const allowFlexValue =
+          target.allowFlex;
+
+        let active =
+          target.active !== false &&
+          target.enabled !== false;
+
+        if (
+          allowFlexValue !== undefined &&
+          allowFlexValue !== null &&
+          allowFlexValue !== ''
+        ) {
+          const allowText =
+            String(
+              allowFlexValue
+            )
+              .trim()
+              .toLowerCase();
+
+          active =
+            active &&
+            ![
+              'false',
+              '0',
+              'no',
+              'ไม่',
+              'ไม่ใช่'
+            ].includes(
+              allowText
+            );
+        }
+
+        if (
+          /ออกจากกลุ่ม|ถูกบล็อก|ไม่ใช้งาน/
+            .test(
+              botStatus
+            )
+        ) {
+          active =
+            false;
+        }
+
         result.push({
           id:
             id,
 
           type:
-            String(
-              target.type ||
-              target.targetType ||
-              'LINE'
-            )
-              .trim()
-              .toUpperCase(),
+            type,
 
           name:
-            String(
-              target.name ||
-              target.displayName ||
-              id
-            ).trim()
+            name,
+
+          pictureUrl:
+            pictureUrl,
+
+          botStatus:
+            botStatus,
+
+          active:
+            active
         });
       }
     );
 
     return result;
   }
-
 
   function setSelectLoading(
     select,
@@ -1025,14 +1267,20 @@
         ? targets
         : [];
 
-    state.selectedLineTargetIds
-      .clear();
+    state.selectedLineTargetIds =
+      [];
+
+    state.lineTargetDraftIds =
+      [];
+
+    state.lineTargetSearch =
+      '';
+
+    state.lineTargetFilter =
+      'ALL';
 
     elements.lineTarget.value =
       '';
-
-    elements.lineTargetList
-      .replaceChildren();
 
     elements.lineTargetSelector
       .classList.remove(
@@ -1055,129 +1303,33 @@
         MAX_LINE_TARGETS;
     }
 
+    elements.openLineTargetPickerButton
+      .disabled =
+      list.length < 1;
+
     if (
       list.length < 1
     ) {
-      const empty =
-        document.createElement(
-          'p'
-        );
-
-      empty.className =
-        'line-target-empty';
-
-      empty.textContent =
-        'ยังไม่พบปลายทาง LINE';
-
-      elements.lineTargetList
-        .appendChild(
-          empty
-        );
-
       elements.lineTargetSelector
         .classList.add(
           'is-disabled'
         );
-
-      updateLineTargetSelectionUi();
-      return;
     }
 
-    list.forEach(
-      function (
-        target,
-        index
-      ) {
-        const label =
-          document.createElement(
-            'label'
-          );
-
-        label.className =
-          'line-target-option';
-
-        label.dataset.targetId =
-          target.id;
-
-        const checkbox =
-          document.createElement(
-            'input'
-          );
-
-        checkbox.type =
-          'checkbox';
-
-        checkbox.className =
-          'line-target-checkbox';
-
-        checkbox.value =
-          target.id;
-
-        checkbox.dataset.lineTargetId =
-          target.id;
-
-        checkbox.id =
-          'lineTargetOption' +
-          index;
-
-        const copy =
-          document.createElement(
-            'span'
-          );
-
-        copy.className =
-          'line-target-copy';
-
-        const name =
-          document.createElement(
-            'span'
-          );
-
-        name.className =
-          'line-target-name';
-
-        name.textContent =
-          target.name;
-
-        const type =
-          document.createElement(
-            'span'
-          );
-
-        type.className =
-          'line-target-type';
-
-        type.textContent =
-          getTargetTypeLabel(
-            target.type
-          );
-
-        copy.append(
-          name,
-          type
-        );
-
-        label.append(
-          checkbox,
-          copy
-        );
-
-        elements.lineTargetList
-          .appendChild(
-            label
-          );
-      }
-    );
-
+    updateLineTargetFilterButtons();
     updateLineTargetSelectionUi();
+    renderLineTargetModalList();
   }
 
 
   function setLineTargetLoading(
     text
   ) {
-    state.selectedLineTargetIds
-      .clear();
+    state.selectedLineTargetIds =
+      [];
+
+    state.lineTargetDraftIds =
+      [];
 
     elements.lineTarget.value =
       '';
@@ -1218,13 +1370,691 @@
         'true'
       );
 
+    elements.openLineTargetPickerButton
+      .disabled =
+      true;
+
     elements.clearLineTargetsButton
       .disabled =
       true;
+
+    renderSelectedLineTargetCards();
   }
 
 
-  function handleLineTargetChange(
+  function openLineTargetModal() {
+    const available =
+      getAvailableLineTargets();
+
+    if (
+      available.length < 1 ||
+      state.loadingOptions
+    ) {
+      return;
+    }
+
+    state.lineTargetDraftIds =
+      state.selectedLineTargetIds
+        .slice();
+
+    state.lineTargetSearch =
+      '';
+
+    state.lineTargetFilter =
+      'ALL';
+
+    elements.lineTargetSearch.value =
+      '';
+
+    elements.clearLineTargetSearchButton
+      .hidden =
+      true;
+
+    clearLineTargetModalMessage();
+    updateLineTargetFilterButtons();
+    renderLineTargetModalList();
+
+    state.lineTargetModalOpen =
+      true;
+
+    elements.lineTargetModal.hidden =
+      false;
+
+    document.body.classList.add(
+      'line-target-modal-open'
+    );
+
+    window.setTimeout(
+      function () {
+        elements.lineTargetSearch
+          .focus();
+      },
+      80
+    );
+  }
+
+
+  function closeLineTargetModal(
+    commitSelection
+  ) {
+    if (
+      !state.lineTargetModalOpen
+    ) {
+      return;
+    }
+
+    if (
+      commitSelection === true
+    ) {
+      state.selectedLineTargetIds =
+        state.lineTargetDraftIds
+          .slice(
+            0,
+            MAX_LINE_TARGETS
+          );
+
+      clearFormError();
+      clearSuccess();
+    }
+
+    state.lineTargetDraftIds =
+      [];
+
+    state.lineTargetModalOpen =
+      false;
+
+    elements.lineTargetModal.hidden =
+      true;
+
+    document.body.classList.remove(
+      'line-target-modal-open'
+    );
+
+    clearLineTargetModalMessage();
+    updateLineTargetSelectionUi();
+    updateSubmitAvailability();
+
+    elements.openLineTargetPickerButton
+      .focus();
+  }
+
+
+  function handleLineTargetModalKeydown(
+    event
+  ) {
+    if (
+      !state.lineTargetModalOpen
+    ) {
+      return;
+    }
+
+    if (
+      event.key === 'Escape'
+    ) {
+      event.preventDefault();
+
+      closeLineTargetModal(
+        false
+      );
+    }
+  }
+
+
+  function handleLineTargetSearch(
+    event
+  ) {
+    state.lineTargetSearch =
+      String(
+        event.currentTarget.value ||
+        ''
+      )
+        .trim()
+        .toLowerCase();
+
+    elements.clearLineTargetSearchButton
+      .hidden =
+      !state.lineTargetSearch;
+
+    clearLineTargetModalMessage();
+    renderLineTargetModalList();
+  }
+
+
+  function clearLineTargetSearch() {
+    state.lineTargetSearch =
+      '';
+
+    elements.lineTargetSearch.value =
+      '';
+
+    elements.clearLineTargetSearchButton
+      .hidden =
+      true;
+
+    clearLineTargetModalMessage();
+    renderLineTargetModalList();
+
+    elements.lineTargetSearch
+      .focus();
+  }
+
+
+  function handleLineTargetFilterClick(
+    event
+  ) {
+    const button =
+      event.target.closest(
+        '[data-line-target-filter]'
+      );
+
+    if (
+      !button ||
+      !elements.lineTargetFilters
+        .contains(
+          button
+        )
+    ) {
+      return;
+    }
+
+    const filter =
+      String(
+        button.dataset
+          .lineTargetFilter ||
+        'ALL'
+      ).toUpperCase();
+
+    state.lineTargetFilter =
+      [
+        'ALL',
+        'GROUP',
+        'USER',
+        'ROOM'
+      ].includes(
+        filter
+      )
+        ? filter
+        : 'ALL';
+
+    clearLineTargetModalMessage();
+    updateLineTargetFilterButtons();
+    renderLineTargetModalList();
+  }
+
+
+  function updateLineTargetFilterButtons() {
+    elements.lineTargetFilters
+      .querySelectorAll(
+        '[data-line-target-filter]'
+      )
+      .forEach(
+        function (button) {
+          const active =
+            String(
+              button.dataset
+                .lineTargetFilter ||
+              ''
+            ).toUpperCase() ===
+            state.lineTargetFilter;
+
+          button.classList.toggle(
+            'is-active',
+            active
+          );
+
+          button.setAttribute(
+            'aria-selected',
+            active
+              ? 'true'
+              : 'false'
+          );
+        }
+      );
+  }
+
+
+  function getAvailableLineTargets() {
+    return (
+      state.options &&
+      Array.isArray(
+        state.options.lineTargets
+      )
+        ? state.options.lineTargets
+        : []
+    );
+  }
+
+
+  function getLineTargetById(
+    targetId
+  ) {
+    const cleanId =
+      String(
+        targetId || ''
+      ).trim();
+
+    if (!cleanId) {
+      return null;
+    }
+
+    return (
+      getAvailableLineTargets()
+        .find(
+          function (target) {
+            return target.id ===
+              cleanId;
+          }
+        ) ||
+      null
+    );
+  }
+
+
+  function getFilteredLineTargets() {
+    const filter =
+      state.lineTargetFilter;
+
+    const query =
+      state.lineTargetSearch;
+
+    return getAvailableLineTargets()
+      .filter(
+        function (target) {
+          if (
+            filter !== 'ALL' &&
+            target.type !== filter
+          ) {
+            return false;
+          }
+
+          if (!query) {
+            return true;
+          }
+
+          const haystack =
+            [
+              target.name,
+              target.type,
+              getTargetTypeLabel(
+                target.type
+              ),
+              target.botStatus
+            ]
+              .join(' ')
+              .toLowerCase();
+
+          return haystack.includes(
+            query
+          );
+        }
+      );
+  }
+
+
+  function renderLineTargetModalList() {
+    if (
+      !elements.lineTargetList
+    ) {
+      return;
+    }
+
+    const targets =
+      getFilteredLineTargets();
+
+    const selectedCount =
+      state.lineTargetDraftIds
+        .length;
+
+    const maximumReached =
+      selectedCount >=
+      MAX_LINE_TARGETS;
+
+    elements.lineTargetList
+      .replaceChildren();
+
+    if (
+      targets.length < 1
+    ) {
+      const empty =
+        document.createElement(
+          'p'
+        );
+
+      empty.className =
+        'line-target-empty';
+
+      empty.textContent =
+        state.lineTargetSearch
+          ? 'ไม่พบปลายทางที่ตรงกับคำค้นหา'
+          : 'ไม่พบปลายทาง LINE ในหมวดนี้';
+
+      elements.lineTargetList
+        .appendChild(
+          empty
+        );
+
+    } else {
+      const fragment =
+        document.createDocumentFragment();
+
+      targets.forEach(
+        function (target) {
+          const selectedIndex =
+            state.lineTargetDraftIds
+              .indexOf(
+                target.id
+              );
+
+          const selected =
+            selectedIndex >= 0;
+
+          const disabled =
+            !target.active ||
+            (
+              maximumReached &&
+              !selected
+            );
+
+          const label =
+            document.createElement(
+              'label'
+            );
+
+          label.className =
+            'line-target-option';
+
+          label.classList.toggle(
+            'is-selected',
+            selected
+          );
+
+          label.classList.toggle(
+            'is-unavailable',
+            disabled
+          );
+
+          label.dataset.targetId =
+            target.id;
+
+          const avatar =
+            createLineTargetAvatar(
+              target
+            );
+
+          const copy =
+            document.createElement(
+              'span'
+            );
+
+          copy.className =
+            'line-target-copy';
+
+          const name =
+            document.createElement(
+              'span'
+            );
+
+          name.className =
+            'line-target-name';
+
+          name.textContent =
+            target.name;
+
+          const meta =
+            document.createElement(
+              'span'
+            );
+
+          meta.className =
+            'line-target-meta';
+
+          const type =
+            document.createElement(
+              'span'
+            );
+
+          type.className =
+            'line-target-type';
+
+          type.textContent =
+            getTargetTypeLabel(
+              target.type
+            );
+
+          const status =
+            document.createElement(
+              'span'
+            );
+
+          status.className =
+            'line-target-status';
+
+          status.textContent =
+            target.active
+              ? (
+                  target.botStatus ||
+                  'พร้อมส่ง Flex'
+                )
+              : (
+                  target.botStatus ||
+                  'ไม่พร้อมใช้งาน'
+                );
+
+          meta.append(
+            type,
+            status
+          );
+
+          copy.append(
+            name,
+            meta
+          );
+
+          const choice =
+            document.createElement(
+              'span'
+            );
+
+          choice.className =
+            'line-target-choice';
+
+          const checkbox =
+            document.createElement(
+              'input'
+            );
+
+          checkbox.type =
+            'checkbox';
+
+          checkbox.className =
+            'line-target-checkbox';
+
+          checkbox.value =
+            target.id;
+
+          checkbox.dataset
+            .lineTargetId =
+            target.id;
+
+          checkbox.checked =
+            selected;
+
+          checkbox.disabled =
+            disabled;
+
+          const badge =
+            document.createElement(
+              'span'
+            );
+
+          badge.className =
+            'line-target-rank-badge';
+
+          badge.textContent =
+            selected
+              ? String(
+                  selectedIndex + 1
+                )
+              : '+';
+
+          choice.append(
+            checkbox,
+            badge
+          );
+
+          label.append(
+            avatar,
+            copy,
+            choice
+          );
+
+          fragment.appendChild(
+            label
+          );
+        }
+      );
+
+      elements.lineTargetList
+        .appendChild(
+          fragment
+        );
+    }
+
+    elements.lineTargetResultCount
+      .textContent =
+      targets.length +
+      ' รายการ';
+
+    elements.lineTargetModalSelectedCount
+      .textContent =
+      'เลือกแล้ว ' +
+      selectedCount +
+      '/' +
+      MAX_LINE_TARGETS;
+
+    elements.clearLineTargetDraftButton
+      .disabled =
+      selectedCount < 1;
+
+    elements.confirmLineTargetSelectionButton
+      .textContent =
+      selectedCount > 0
+        ? (
+            'ยืนยัน ' +
+            selectedCount +
+            ' ปลายทาง'
+          )
+        : 'ยืนยันการเลือก';
+  }
+
+
+  function createLineTargetAvatar(
+    target
+  ) {
+    const avatar =
+      document.createElement(
+        'span'
+      );
+
+    avatar.className =
+      'line-target-avatar ' +
+      (
+        target.type === 'GROUP'
+          ? 'is-group'
+          : (
+              target.type === 'USER'
+                ? 'is-user'
+                : (
+                    target.type === 'ROOM'
+                      ? 'is-room'
+                      : ''
+                  )
+            )
+      );
+
+    if (
+      target.pictureUrl &&
+      /^https:\/\//i.test(
+        target.pictureUrl
+      )
+    ) {
+      const image =
+        document.createElement(
+          'img'
+        );
+
+      image.src =
+        target.pictureUrl;
+
+      image.alt =
+        '';
+
+      image.loading =
+        'lazy';
+
+      image.referrerPolicy =
+        'no-referrer';
+
+      image.addEventListener(
+        'error',
+        function () {
+          avatar.replaceChildren(
+            document.createTextNode(
+              getTargetAvatarText(
+                target
+              )
+            )
+          );
+        },
+        {
+          once:
+            true
+        }
+      );
+
+      avatar.appendChild(
+        image
+      );
+
+    } else {
+      avatar.textContent =
+        getTargetAvatarText(
+          target
+        );
+    }
+
+    return avatar;
+  }
+
+
+  function getTargetAvatarText(
+    target
+  ) {
+    if (
+      target.type === 'GROUP'
+    ) {
+      return 'G';
+    }
+
+    if (
+      target.type === 'ROOM'
+    ) {
+      return 'R';
+    }
+
+    const firstCharacter =
+      Array.from(
+        String(
+          target.name || 'U'
+        ).trim()
+      )[0];
+
+    return firstCharacter ||
+      'U';
+  }
+
+
+  function handleLineTargetDraftChange(
     event
   ) {
     const checkbox =
@@ -1247,116 +2077,112 @@
         ''
       ).trim();
 
-    if (!targetId) {
+    const target =
+      getLineTargetById(
+        targetId
+      );
+
+    if (
+      !target ||
+      !target.active
+    ) {
       checkbox.checked =
         false;
 
+      showLineTargetModalMessage(
+        'ปลายทางนี้ยังไม่พร้อมรับ Flex Message'
+      );
+
+      renderLineTargetModalList();
       return;
     }
+
+    const existingIndex =
+      state.lineTargetDraftIds
+        .indexOf(
+          targetId
+        );
 
     if (
       checkbox.checked
     ) {
       if (
-        state
-          .selectedLineTargetIds
-          .size >=
+        existingIndex >= 0
+      ) {
+        return;
+      }
+
+      if (
+        state.lineTargetDraftIds
+          .length >=
         MAX_LINE_TARGETS
       ) {
         checkbox.checked =
           false;
 
-        showFormError(
-          'เลือกปลายทาง LINE ได้สูงสุด ' +
+        showLineTargetModalMessage(
+          'เลือกได้สูงสุด ' +
           MAX_LINE_TARGETS +
-          ' ปลายทาง'
+          ' ปลายทาง กรุณายกเลิกรายการเดิมก่อน'
         );
 
+        renderLineTargetModalList();
         return;
       }
 
-      state
-        .selectedLineTargetIds
-        .add(
+      state.lineTargetDraftIds
+        .push(
           targetId
         );
 
-    } else {
-      state
-        .selectedLineTargetIds
-        .delete(
-          targetId
+    } else if (
+      existingIndex >= 0
+    ) {
+      state.lineTargetDraftIds
+        .splice(
+          existingIndex,
+          1
         );
     }
 
-    clearFormError();
-    clearSuccess();
-    updateLineTargetSelectionUi();
-    updateSubmitAvailability();
+    clearLineTargetModalMessage();
+    renderLineTargetModalList();
+  }
+
+
+  function showLineTargetModalMessage(
+    message
+  ) {
+    elements.lineTargetModalMessage
+      .textContent =
+      message;
+
+    elements.lineTargetModalMessage
+      .hidden =
+      false;
+  }
+
+
+  function clearLineTargetModalMessage() {
+    elements.lineTargetModalMessage
+      .textContent =
+      '';
+
+    elements.lineTargetModalMessage
+      .hidden =
+      true;
   }
 
 
   function updateLineTargetSelectionUi() {
+    const selectedTargets =
+      getSelectedLineTargets();
+
     const selectedCount =
-      state
-        .selectedLineTargetIds
-        .size;
-
-    const maximumReached =
-      selectedCount >=
-      MAX_LINE_TARGETS;
-
-    const checkboxes =
-      elements.lineTargetList
-        .querySelectorAll(
-          '[data-line-target-id]'
-        );
-
-    checkboxes.forEach(
-      function (checkbox) {
-        const targetId =
-          String(
-            checkbox.dataset
-              .lineTargetId ||
-            checkbox.value ||
-            ''
-          ).trim();
-
-        const selected =
-          state
-            .selectedLineTargetIds
-            .has(
-              targetId
-            );
-
-        checkbox.checked =
-          selected;
-
-        checkbox.disabled =
-          !selected &&
-          maximumReached;
-
-        const option =
-          checkbox.closest(
-            '.line-target-option'
-          );
-
-        if (option) {
-          option.classList.toggle(
-            'is-selected',
-            selected
-          );
-
-          option.classList.toggle(
-            'is-unavailable',
-            checkbox.disabled
-          );
-        }
-      }
-    );
+      selectedTargets.length;
 
     const firstTarget =
-      getSelectedLineTargets()[0] ||
+      selectedTargets[0] ||
       null;
 
     elements.lineTarget.value =
@@ -1374,40 +2200,387 @@
             MAX_LINE_TARGETS +
             ' ปลายทาง'
           )
-        : 'ยังไม่ได้เลือกปลายทาง LINE';
+        : 'เลือกกลุ่มหรือบุคคล';
+
+    if (
+      elements.lineTargetSelectionHint
+    ) {
+      elements.lineTargetSelectionHint
+        .textContent =
+        selectedCount > 0
+          ? 'ลำดับด้านล่างคือลำดับการส่ง Flex'
+          : 'ต้องเลือกอย่างน้อย 1 ปลายทาง';
+    }
 
     elements.clearLineTargetsButton
       .disabled =
       selectedCount < 1;
+
+    elements.lineTargetSelector
+      .classList.toggle(
+        'has-selection',
+        selectedCount > 0
+      );
+
+    renderSelectedLineTargetCards();
   }
 
 
-  function getSelectedLineTargets() {
-    const available =
-      state.options &&
-      Array.isArray(
-        state.options.lineTargets
-      )
-        ? state.options.lineTargets
-        : [];
+  function renderSelectedLineTargetCards() {
+    elements.selectedLineTargetList
+      .replaceChildren();
 
-    return available.filter(
-      function (target) {
-        return state
-          .selectedLineTargetIds
-          .has(
-            target.id
+    const selectedTargets =
+      getSelectedLineTargets();
+
+    if (
+      selectedTargets.length < 1
+    ) {
+      const empty =
+        document.createElement(
+          'p'
+        );
+
+      empty.className =
+        'selected-line-target-empty';
+
+      empty.textContent =
+        'ยังไม่ได้เลือกปลายทาง LINE';
+
+      elements.selectedLineTargetList
+        .appendChild(
+          empty
+        );
+
+      return;
+    }
+
+    const fragment =
+      document.createDocumentFragment();
+
+    selectedTargets.forEach(
+      function (
+        target,
+        index
+      ) {
+        const card =
+          document.createElement(
+            'article'
           );
+
+        card.className =
+          'selected-line-target-card';
+
+        card.dataset.targetId =
+          target.id;
+
+        const rank =
+          document.createElement(
+            'span'
+          );
+
+        rank.className =
+          'selected-line-target-rank';
+
+        rank.textContent =
+          String(
+            index + 1
+          );
+
+        const copy =
+          document.createElement(
+            'span'
+          );
+
+        copy.className =
+          'selected-line-target-copy';
+
+        const name =
+          document.createElement(
+            'strong'
+          );
+
+        name.textContent =
+          target.name;
+
+        const type =
+          document.createElement(
+            'span'
+          );
+
+        type.textContent =
+          getTargetTypeLabel(
+            target.type
+          );
+
+        copy.append(
+          name,
+          type
+        );
+
+        const actions =
+          document.createElement(
+            'span'
+          );
+
+        actions.className =
+          'selected-line-target-actions';
+
+        const upButton =
+          document.createElement(
+            'button'
+          );
+
+        upButton.type =
+          'button';
+
+        upButton.className =
+          'selected-line-target-action';
+
+        upButton.dataset
+          .lineTargetAction =
+          'up';
+
+        upButton.dataset.targetId =
+          target.id;
+
+        upButton.disabled =
+          index === 0;
+
+        upButton.setAttribute(
+          'aria-label',
+          'เลื่อนขึ้น'
+        );
+
+        upButton.textContent =
+          '↑';
+
+        const downButton =
+          document.createElement(
+            'button'
+          );
+
+        downButton.type =
+          'button';
+
+        downButton.className =
+          'selected-line-target-action';
+
+        downButton.dataset
+          .lineTargetAction =
+          'down';
+
+        downButton.dataset.targetId =
+          target.id;
+
+        downButton.disabled =
+          index ===
+          selectedTargets.length - 1;
+
+        downButton.setAttribute(
+          'aria-label',
+          'เลื่อนลง'
+        );
+
+        downButton.textContent =
+          '↓';
+
+        const removeButton =
+          document.createElement(
+            'button'
+          );
+
+        removeButton.type =
+          'button';
+
+        removeButton.className =
+          'selected-line-target-action';
+
+        removeButton.dataset
+          .lineTargetAction =
+          'remove';
+
+        removeButton.dataset.targetId =
+          target.id;
+
+        removeButton.setAttribute(
+          'aria-label',
+          'นำออก'
+        );
+
+        removeButton.textContent =
+          '×';
+
+        actions.append(
+          upButton,
+          downButton,
+          removeButton
+        );
+
+        card.append(
+          rank,
+          copy,
+          actions
+        );
+
+        fragment.appendChild(
+          card
+        );
       }
     );
+
+    elements.selectedLineTargetList
+      .appendChild(
+        fragment
+      );
+  }
+
+
+  function handleSelectedLineTargetAction(
+    event
+  ) {
+    const button =
+      event.target.closest(
+        '[data-line-target-action]'
+      );
+
+    if (
+      !button ||
+      !elements.selectedLineTargetList
+        .contains(
+          button
+        )
+    ) {
+      return;
+    }
+
+    const targetId =
+      String(
+        button.dataset.targetId ||
+        ''
+      ).trim();
+
+    const action =
+      String(
+        button.dataset
+          .lineTargetAction ||
+        ''
+      );
+
+    const index =
+      state.selectedLineTargetIds
+        .indexOf(
+          targetId
+        );
+
+    if (
+      index < 0
+    ) {
+      return;
+    }
+
+    if (
+      action === 'remove'
+    ) {
+      state.selectedLineTargetIds
+        .splice(
+          index,
+          1
+        );
+
+    } else if (
+      action === 'up' &&
+      index > 0
+    ) {
+      moveArrayItem(
+        state.selectedLineTargetIds,
+        index,
+        index - 1
+      );
+
+    } else if (
+      action === 'down' &&
+      index <
+        state
+          .selectedLineTargetIds
+          .length - 1
+    ) {
+      moveArrayItem(
+        state.selectedLineTargetIds,
+        index,
+        index + 1
+      );
+    }
+
+    clearFormError();
+    clearSuccess();
+    updateLineTargetSelectionUi();
+    updateSubmitAvailability();
+  }
+
+
+  function moveArrayItem(
+    list,
+    fromIndex,
+    toIndex
+  ) {
+    if (
+      !Array.isArray(list) ||
+      fromIndex === toIndex ||
+      fromIndex < 0 ||
+      toIndex < 0 ||
+      fromIndex >= list.length ||
+      toIndex >= list.length
+    ) {
+      return;
+    }
+
+    const item =
+      list.splice(
+        fromIndex,
+        1
+      )[0];
+
+    list.splice(
+      toIndex,
+      0,
+      item
+    );
+  }
+
+
+  function getSelectedLineTargets(
+    targetIds
+  ) {
+    const ids =
+      Array.isArray(
+        targetIds
+      )
+        ? targetIds
+        : state.selectedLineTargetIds;
+
+    return ids
+      .map(
+        function (targetId) {
+          return getLineTargetById(
+            targetId
+          );
+        }
+      )
+      .filter(
+        Boolean
+      );
   }
 
 
   function clearLineTargetSelection(
     notifyChange
   ) {
-    state.selectedLineTargetIds
-      .clear();
+    state.selectedLineTargetIds =
+      [];
+
+    state.lineTargetDraftIds =
+      [];
 
     elements.lineTarget.value =
       '';
@@ -1422,7 +2595,6 @@
       updateSubmitAvailability();
     }
   }
-
 
   function getTargetTypeLabel(
     type

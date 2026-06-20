@@ -37,6 +37,9 @@
     token:
       '',
 
+    returnContext:
+      '',
+
     accessToken:
       '',
 
@@ -118,6 +121,9 @@
       'profileFallback',
       'profileName',
       'profileFriendStatus',
+      'returnTargetCard',
+      'returnTargetName',
+      'returnTargetType',
       'caseStatusBadge',
       'caseIdText',
       'reportedAtText',
@@ -358,6 +364,9 @@
       state.token =
         extractEditToken();
 
+      state.returnContext =
+        extractReturnContext();
+
       if (!state.token) {
         throw createPageError(
           'EDIT_TOKEN_REQUIRED',
@@ -417,7 +426,10 @@
               state.accessToken,
 
             idToken:
-              state.idToken
+              state.idToken,
+
+            returnContext:
+              state.returnContext
           },
           requestId
         );
@@ -465,6 +477,11 @@
 
       renderProfile(
         verifiedProfile
+      );
+
+      renderReturnTarget(
+        openData.correctionReturnTarget,
+        openData.correctionReturnMode
       );
 
       renderCase(
@@ -647,6 +664,101 @@
   }
 
 
+  function extractReturnContext() {
+    const urls = [
+      INITIAL_URL,
+      window.location.href
+    ];
+
+    for (const urlText of urls) {
+      try {
+        const url =
+          new URL(urlText);
+
+        const direct =
+          url.searchParams.get('rt');
+
+        if (direct) {
+          return direct;
+        }
+
+        const liffState =
+          url.searchParams.get(
+            'liff.state'
+          );
+
+        const fromState =
+          extractParameterFromLiffState(
+            liffState,
+            'rt'
+          );
+
+        if (fromState) {
+          return fromState;
+        }
+      } catch (error) {
+        // ทดลอง URL ถัดไป
+      }
+    }
+
+    return '';
+  }
+
+
+  function extractParameterFromLiffState(
+    value,
+    parameterName
+  ) {
+    if (!value) {
+      return '';
+    }
+
+    let text =
+      String(value);
+
+    for (
+      let attempt = 0;
+      attempt < 3;
+      attempt++
+    ) {
+      try {
+        const url =
+          new URL(
+            text,
+            window.location.origin
+          );
+
+        const found =
+          url.searchParams.get(
+            parameterName
+          );
+
+        if (found) {
+          return found;
+        }
+      } catch (error) {
+        // ทดลอง decode ด้านล่าง
+      }
+
+      try {
+        const decoded =
+          decodeURIComponent(text);
+
+        if (decoded === text) {
+          break;
+        }
+
+        text =
+          decoded;
+      } catch (error) {
+        break;
+      }
+    }
+
+    return '';
+  }
+
+
   function extractTokenFromLiffState(
     value
   ) {
@@ -739,6 +851,80 @@
   }
 
 
+  function renderReturnTarget(
+    target,
+    mode
+  ) {
+    const source =
+      target &&
+      typeof target === 'object'
+        ? target
+        : {};
+
+    const targetName =
+      String(
+        source.name ||
+        source.targetName ||
+        ''
+      ).trim();
+
+    const targetType =
+      String(
+        source.type ||
+        source.targetType ||
+        ''
+      )
+        .trim()
+        .toUpperCase();
+
+    if (targetName) {
+      elements.returnTargetName.textContent =
+        targetName;
+
+      elements.returnTargetType.textContent =
+        getLineTargetTypeLabel(
+          targetType
+        ) +
+        ' · ระบบจะส่ง Flex ผลการแก้ไขกลับอัตโนมัติ';
+
+      elements.returnTargetCard.dataset.mode =
+        'origin';
+
+      return;
+    }
+
+    elements.returnTargetName.textContent =
+      'ปลายทางเดิมของรายการ';
+
+    elements.returnTargetType.textContent =
+      mode === 'LEGACY_ALL_TARGETS'
+        ? 'ลิงก์รุ่นเดิม · ระบบจะส่งผลกลับทุกปลายทางเดิม'
+        : 'ระบบกำหนดปลายทางให้อัตโนมัติ';
+
+    elements.returnTargetCard.dataset.mode =
+      'legacy';
+  }
+
+
+  function getLineTargetTypeLabel(type) {
+    switch (
+      String(type || '').toUpperCase()
+    ) {
+      case 'GROUP':
+        return 'กลุ่ม LINE';
+
+      case 'USER':
+        return 'บุคคล LINE';
+
+      case 'ROOM':
+        return 'ห้องสนทนา LINE';
+
+      default:
+        return 'LINE';
+    }
+  }
+
+
   function renderCase(caseData) {
     elements.caseIdText.textContent =
       textOrDash(
@@ -781,6 +967,7 @@
       );
 
     renderOriginalEvidence(
+      caseData.problemEvidenceView ||
       caseData.problemEvidence
     );
   }
@@ -816,41 +1003,110 @@
         item.className =
           'correction-original-evidence-item';
 
-        if (
+        const mediaWrap =
+          document.createElement('div');
+
+        mediaWrap.className =
+          'correction-original-evidence-media';
+
+        const isImage =
           file.mimeType.startsWith(
             'image/'
-          ) &&
-          file.fileId
-        ) {
-          const image =
-            document.createElement('img');
+          );
 
-          image.src =
-            GOOGLE_IMAGE_BASE_URL +
-            encodeURIComponent(
+        const isVideo =
+          file.mimeType.startsWith(
+            'video/'
+          );
+
+        if (isImage) {
+          const imageUrl =
+            firstHttpsUrl([
+              file.displayUrl,
+              file.url,
               file.fileId
+                ? GOOGLE_IMAGE_BASE_URL +
+                  encodeURIComponent(
+                    file.fileId
+                  )
+                : ''
+            ]);
+
+          if (imageUrl) {
+            const image =
+              document.createElement('img');
+
+            image.src =
+              imageUrl;
+
+            image.alt =
+              'ภาพที่แจ้งปัญหา ' +
+              (index + 1);
+
+            image.loading =
+              'lazy';
+
+            mediaWrap.appendChild(
+              image
             );
+          }
+        } else if (isVideo) {
+          const streamUrl =
+            firstHttpsUrl([
+              file.streamUrl,
+              file.directUrl,
+              file.videoUrl,
+              file.publicVideoUrl
+            ]);
 
-          image.alt =
-            'ภาพหลักฐานเดิม ' +
-            (index + 1);
+          if (streamUrl) {
+            const video =
+              document.createElement('video');
 
-          image.loading =
-            'lazy';
+            video.src =
+              streamUrl;
 
-          item.appendChild(image);
-        } else {
-          const icon =
-            document.createElement('div');
+            video.controls =
+              true;
 
-          icon.className =
-            'correction-original-video-icon';
+            video.preload =
+              'metadata';
 
-          icon.textContent =
-            '▶';
+            video.playsInline =
+              true;
 
-          item.appendChild(icon);
+            const poster =
+              firstHttpsUrl([
+                file.previewUrl
+              ]);
+
+            if (poster) {
+              video.poster =
+                poster;
+            }
+
+            mediaWrap.appendChild(
+              video
+            );
+          } else {
+            const icon =
+              document.createElement('div');
+
+            icon.className =
+              'correction-original-video-icon';
+
+            icon.textContent =
+              '▶';
+
+            mediaWrap.appendChild(
+              icon
+            );
+          }
         }
+
+        item.appendChild(
+          mediaWrap
+        );
 
         const copy =
           document.createElement('div');
@@ -864,11 +1120,9 @@
         name.textContent =
           file.fileName ||
           (
-            file.mimeType.startsWith(
-              'video/'
-            )
-              ? 'วิดีโอหลักฐานเดิม'
-              : 'ภาพหลักฐานเดิม'
+            isVideo
+              ? 'วิดีโอที่แจ้งปัญหา'
+              : 'ภาพที่แจ้งปัญหา'
           );
 
         const type =
@@ -888,6 +1142,9 @@
         const viewUrl =
           firstHttpsUrl([
             file.viewUrl,
+            file.openUrl,
+            file.streamUrl,
+            file.directUrl,
             file.videoUrl,
             file.publicVideoUrl,
             file.url
@@ -907,7 +1164,9 @@
             'noopener noreferrer';
 
           link.textContent =
-            'เปิดดู';
+            isVideo
+              ? 'เปิดวิดีโอ'
+              : 'เปิดภาพ';
 
           item.appendChild(link);
         }
@@ -952,8 +1211,23 @@
                   file.mimeType || ''
                 ).toLowerCase(),
 
+              displayUrl:
+                file.displayUrl || '',
+
               viewUrl:
                 file.viewUrl || '',
+
+              openUrl:
+                file.openUrl || '',
+
+              streamUrl:
+                file.streamUrl || '',
+
+              directUrl:
+                file.directUrl || '',
+
+              previewUrl:
+                file.previewUrl || '',
 
               videoUrl:
                 file.videoUrl || '',
@@ -1615,7 +1889,10 @@
               state.accessToken,
 
             idToken:
-              state.idToken
+              state.idToken,
+
+            returnContext:
+              state.returnContext
           },
           requestId
         );

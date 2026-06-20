@@ -3882,3 +3882,244 @@ button {
       minmax(0, 1.38fr);
   }
 }
+
+
+/************************************************************
+ * Correction media row + real LINE add-friend controls
+ * Version: 2026.06.20-correction-6
+ ************************************************************/
+
+.line-bot-friend-button {
+  color: #ffffff !important;
+  background:
+    linear-gradient(
+      135deg,
+      #06c755,
+      #00a947
+    ) !important;
+  box-shadow:
+    0 6px 14px
+    rgba(6, 199, 85, 0.22) !important;
+}
+
+
+.correction-friend-actions {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+
+
+.correction-friend-actions button {
+  width: 100%;
+  min-height: 38px;
+}
+
+
+.correction-friend-help {
+  display: block;
+  margin-top: 6px;
+  color: #8b6b22;
+  font-size: 0.56rem;
+  line-height: 1.4;
+}
+
+
+/*
+ * หลักฐานเดิมสูงสุด 3 ไฟล์:
+ * บังคับให้อยู่แถวเดียวกันและใช้การ์ดขนาดเล็ก
+ */
+.correction-original-evidence-list {
+  display: grid !important;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr)) !important;
+  gap: 5px !important;
+  align-items: start;
+}
+
+
+.correction-original-evidence-item {
+  display: grid !important;
+  grid-template-columns:
+    minmax(0, 1fr) !important;
+  gap: 3px !important;
+  min-width: 0;
+  padding: 4px !important;
+  border-radius: 9px !important;
+  background: #f8faff;
+}
+
+
+.correction-original-evidence-open {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 8px;
+  background: #101828;
+  cursor: pointer;
+}
+
+
+.correction-original-evidence-open:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+
+.correction-original-evidence-media,
+.correction-original-evidence-media img,
+.correction-original-evidence-media video {
+  min-height: 0 !important;
+  max-height: none !important;
+}
+
+
+.correction-original-evidence-media {
+  position: relative;
+  display: block !important;
+  width: 100% !important;
+  height: auto !important;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: 8px !important;
+  background:
+    linear-gradient(
+      145deg,
+      #101828,
+      #253353
+    ) !important;
+}
+
+
+.correction-original-evidence-media img {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  background: #101828;
+}
+
+
+.correction-original-evidence-media
+.correction-original-video-icon {
+  display: grid;
+  width: 100% !important;
+  height: 100% !important;
+  place-items: center;
+  border-radius: 0 !important;
+  font-size: 1.2rem;
+}
+
+
+.correction-original-evidence-type {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 2;
+  padding: 2px 4px;
+  border-radius: 5px;
+  color: #ffffff;
+  background:
+    rgba(10, 18, 38, 0.74);
+  font-size: 0.42rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+
+.correction-original-video-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  display: grid;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  transform:
+    translate(-50%, -50%);
+  border: 2px solid
+    rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  color: #ffffff;
+  background:
+    rgba(10, 18, 38, 0.72);
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+
+.correction-original-open-label {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  z-index: 2;
+  max-width:
+    calc(100% - 8px);
+  padding: 2px 5px;
+  overflow: hidden;
+  border-radius: 5px;
+  color: #ffffff;
+  background:
+    rgba(10, 18, 38, 0.76);
+  font-size: 0.44rem;
+  font-weight: 900;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+.correction-original-evidence-copy {
+  min-width: 0;
+  padding: 1px 2px 2px;
+}
+
+
+.correction-original-evidence-copy strong,
+.correction-original-evidence-copy span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+.correction-original-evidence-copy strong {
+  color: #2b3b58;
+  font-size: 0.52rem !important;
+  line-height: 1.25;
+}
+
+
+.correction-original-evidence-copy span {
+  margin-top: 1px;
+  color: var(--muted);
+  font-size: 0.44rem !important;
+  line-height: 1.2;
+}
+
+
+@media (max-width: 350px) {
+  .correction-original-evidence-list {
+    gap: 3px !important;
+  }
+
+  .correction-original-evidence-item {
+    padding: 3px !important;
+  }
+
+  .correction-original-evidence-copy span {
+    display: none;
+  }
+
+  .correction-friend-actions {
+    grid-template-columns:
+      minmax(0, 1fr);
+  }
+}

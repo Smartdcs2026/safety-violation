@@ -1,10 +1,14 @@
 /************************************************************
  * api.js
  * ตัวกลางเรียก Cloudflare Worker
+ * Version: 2026.06.20-correction-4
  ************************************************************/
 
 (function (window) {
   'use strict';
+
+  const API_CLIENT_VERSION =
+    '2026.06.20-correction-4';
 
   const CONFIG =
     window.APP_CONFIG || {};
@@ -294,16 +298,13 @@
 
 
   async function health() {
-    const response =
-      await request(
-        '/api/health',
-        {
-          method:
-            'GET'
-        }
-      );
-
-    return response;
+    return request(
+      '/api/health',
+      {
+        method:
+          'GET'
+      }
+    );
   }
 
 
@@ -385,7 +386,71 @@
   }
 
 
+  async function openCorrection(
+    payload,
+    requestId
+  ) {
+    const response =
+      await request(
+        '/api/liff/open',
+        {
+          method:
+            'POST',
+
+          body:
+            payload,
+
+          requestId:
+            requestId ||
+            createRequestId(
+              'LIFF-OPEN'
+            ),
+
+          timeoutMs:
+            Number(
+              CONFIG.API_TIMEOUT_MS
+            ) ||
+            30000
+        }
+      );
+
+    return response.data || null;
+  }
+
+
+  async function submitCorrection(
+    payload,
+    requestId
+  ) {
+    return request(
+      '/api/correction',
+      {
+        method:
+          'POST',
+
+        body:
+          payload,
+
+        requestId:
+          requestId ||
+          createRequestId(
+            'CORRECTION'
+          ),
+
+        timeoutMs:
+          Number(
+            CONFIG.SAVE_TIMEOUT_MS
+          ) ||
+          180000
+      }
+    );
+  }
+
+
   window.SafetyAPI = Object.freeze({
+    clientVersion:
+      API_CLIENT_VERSION,
+
     SafetyApiError:
       SafetyApiError,
 
@@ -405,7 +470,20 @@
       getCase,
 
     createReport:
-      createReport
+      createReport,
+
+    openCorrection:
+      openCorrection,
+
+    submitCorrection:
+      submitCorrection
   });
+
+  if (CONFIG.DEBUG === true) {
+    console.info(
+      'SafetyAPI loaded:',
+      API_CLIENT_VERSION
+    );
+  }
 
 })(window);

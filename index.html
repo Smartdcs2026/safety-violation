@@ -642,13 +642,19 @@
       <section
         id="successPanel"
         class="success-panel"
+        role="status"
+        aria-live="polite"
         hidden
       >
-        <span class="success-mark">
+        <span
+          id="successMark"
+          class="success-mark"
+          aria-hidden="true"
+        >
           ✓
         </span>
 
-        <div>
+        <div class="success-content">
           <h2>
             บันทึกข้อมูลสำเร็จ
           </h2>
@@ -658,7 +664,23 @@
             <strong id="successCaseId"></strong>
           </p>
 
-          <p id="successFlexStatus"></p>
+          <p
+            id="successFlexStatus"
+            class="success-flex-status"
+          ></p>
+
+          <div
+            id="successDeliveryList"
+            class="success-delivery-list"
+            aria-label="ผลการส่ง Flex แยกรายปลายทาง"
+            hidden
+          ></div>
+
+          <p
+            id="successDeliveryNote"
+            class="success-delivery-note"
+            hidden
+          ></p>
         </div>
       </section>
 
@@ -864,6 +886,6 @@
   <script src="./config.js?v=20260620-3"></script>
   <script src="./api.js?v=20260620-3"></script>
   <script src="./image-editor.js?v=20260620-3"></script>
-  <script src="./app.js?v=20260620-7"></script>
+  <script src="./app.js?v=20260620-8"></script>
 </body>
 </html>

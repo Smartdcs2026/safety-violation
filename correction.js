@@ -1,7 +1,7 @@
 /************************************************************
  * correction.js
  * ฟอร์มแก้ไขและปิดรายการผ่าน LIFF
- * Version: 2026.06.21-correction-11
+ * Version: 2026.06.21-correction-12
  ************************************************************/
 
 (function (window, document) {
@@ -1845,7 +1845,7 @@
   }
 
 
-  function handleFileSelected(event) {
+  async function handleFileSelected(event) {
     clearFormError();
 
     const input =
@@ -1885,13 +1885,61 @@
         index
       );
 
-      setFile(
+      await setFile(
         index,
         file
       );
     } catch (error) {
       input.value =
         '';
+
+      state.files[index] =
+        null;
+
+      const preview =
+        document.querySelector(
+          '[data-preview-index="' +
+          index +
+          '"]'
+        );
+
+      const media =
+        document.querySelector(
+          '[data-preview-media="' +
+          index +
+          '"]'
+        );
+
+      const slot =
+        document.querySelector(
+          '[data-slot-index="' +
+          index +
+          '"]'
+        );
+
+      const dropzone =
+        slot
+          ? slot.querySelector(
+              '.file-dropzone'
+            )
+          : null;
+
+      if (media) {
+        media.replaceChildren();
+      }
+
+      if (preview) {
+        preview.hidden =
+          true;
+      }
+
+      if (dropzone) {
+        dropzone.hidden =
+          false;
+      }
+
+      updateFileSummary();
+      updateSubmitAvailability();
 
       showFormError(
         error.message
@@ -2056,17 +2104,18 @@
   }
 
 
-  function setFile(index, file) {
+  async function setFile(index, file) {
+    /*
+     * LINE WebView/Samsung บางรุ่นแสดง blob URL จาก
+     * URL.createObjectURL() ไม่เสถียร โดยเฉพาะเมื่อเลือกหลายภาพ
+     * จึงอ่านไฟล์เป็น Data URL สำหรับ Preview แทน
+     */
     revokePreviewUrl(index);
 
-    state.files[index] =
-      file;
-
-    const previewUrl =
-      URL.createObjectURL(file);
-
-    state.previewUrls[index] =
-      previewUrl;
+    const previewDataUrl =
+      await fileToDataUrl(
+        file
+      );
 
     const slot =
       document.querySelector(
@@ -2111,30 +2160,52 @@
     media.replaceChildren();
 
     const image =
-      document.createElement('img');
-
-    image.src =
-      previewUrl;
+      document.createElement(
+        'img'
+      );
 
     image.alt =
       'ตัวอย่างภาพหลักฐานหลังแก้ไข';
 
-    image.loading =
-      'lazy';
+    image.decoding =
+      'async';
+
+    /*
+     * ห้ามใช้ loading="lazy" กับภาพตัวอย่างที่เพิ่งเลือก
+     * เพราะ LINE WebView บางรุ่นไม่เริ่มโหลดหลัง element
+     * เปลี่ยนจาก hidden เป็น visible
+     */
+    await loadPreviewImage(
+      image,
+      previewDataUrl
+    );
 
     media.appendChild(
       image
     );
 
+    /*
+     * บันทึกไฟล์ลง state หลังจาก Preview โหลดสำเร็จเท่านั้น
+     * ป้องกันนับไฟล์ที่ไม่สามารถอ่านได้
+     */
+    state.files[index] =
+      file;
+
     name.textContent =
-      file.name;
+      file.name ||
+      (
+        'ภาพหลักฐาน ' +
+        (index + 1)
+      );
 
     size.textContent =
       getCorrectionImageMimeType(
         file
       ) +
       ' · ' +
-      formatBytes(file.size);
+      formatBytes(
+        file.size
+      );
 
     dropzone.hidden =
       true;
@@ -2144,6 +2215,98 @@
 
     updateFileSummary();
     updateSubmitAvailability();
+  }
+
+
+  function loadPreviewImage(
+    image,
+    dataUrl
+  ) {
+    return new Promise(
+      function (
+        resolve,
+        reject
+      ) {
+        let settled =
+          false;
+
+        const timer =
+          window.setTimeout(
+            function () {
+              if (settled) {
+                return;
+              }
+
+              settled =
+                true;
+
+              image.onload =
+                null;
+
+              image.onerror =
+                null;
+
+              reject(
+                new Error(
+                  'ใช้เวลาแสดงตัวอย่างภาพนานเกินไป กรุณาเลือกภาพใหม่'
+                )
+              );
+            },
+            15000
+          );
+
+        image.onload =
+          function () {
+            if (settled) {
+              return;
+            }
+
+            settled =
+              true;
+
+            window.clearTimeout(
+              timer
+            );
+
+            image.onload =
+              null;
+
+            image.onerror =
+              null;
+
+            resolve();
+          };
+
+        image.onerror =
+          function () {
+            if (settled) {
+              return;
+            }
+
+            settled =
+              true;
+
+            window.clearTimeout(
+              timer
+            );
+
+            image.onload =
+              null;
+
+            image.onerror =
+              null;
+
+            reject(
+              new Error(
+                'ไม่สามารถแสดงตัวอย่างภาพนี้ได้ กรุณาเลือกภาพ JPG, PNG หรือ WEBP ใหม่'
+              )
+            );
+          };
+
+        image.src =
+          dataUrl;
+      }
+    );
   }
 
 

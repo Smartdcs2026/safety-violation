@@ -1,7 +1,7 @@
 /************************************************************
  * correction.js
  * ฟอร์มแก้ไขและปิดรายการผ่าน LIFF
- * Version: 2026.06.20-correction-8
+ * Version: 2026.06.21-correction-9
  ************************************************************/
 
 (function (window, document) {
@@ -158,6 +158,7 @@
       'correctionDetail',
       'correctionDetailCounter',
       'actionDetailField',
+      'actionMethodOptions',
       'actionDetail',
       'actionDetailCounter',
       'confirmerType',
@@ -297,6 +298,22 @@
         updateSubmitAvailability();
       }
     );
+
+    document
+      .querySelectorAll(
+        'input[name="actionMethod"]'
+      )
+      .forEach(
+        function (checkbox) {
+          checkbox.addEventListener(
+            'change',
+            function () {
+              clearFormError();
+              updateSubmitAvailability();
+            }
+          );
+        }
+      );
 
     document
       .querySelectorAll(
@@ -1640,12 +1657,18 @@
     elements.actionDetailField.hidden =
       !hasAction;
 
+    /*
+     * รายละเอียดแบบข้อความไม่บังคับเสมอไป
+     * ผู้ใช้สามารถเลือกมาตรการจาก Checkbox แทนได้
+     */
     elements.actionDetail.required =
-      hasAction;
+      false;
 
     if (!hasAction) {
       elements.actionDetail.value =
         '';
+
+      clearSelectedActionMethods();
 
       updateCounter(
         elements.actionDetail,
@@ -1656,6 +1679,80 @@
 
     clearFormError();
     updateSubmitAvailability();
+  }
+
+
+  function getSelectedActionMethods() {
+    return Array.from(
+      document.querySelectorAll(
+        'input[name="actionMethod"]:checked'
+      )
+    )
+      .map(
+        function (checkbox) {
+          return String(
+            checkbox.value || ''
+          ).trim();
+        }
+      )
+      .filter(Boolean);
+  }
+
+
+  function clearSelectedActionMethods() {
+    document
+      .querySelectorAll(
+        'input[name="actionMethod"]'
+      )
+      .forEach(
+        function (checkbox) {
+          checkbox.checked =
+            false;
+        }
+      );
+  }
+
+
+  function hasActionMethodOrDetail() {
+    return (
+      getSelectedActionMethods()
+        .length > 0 ||
+      Boolean(
+        elements.actionDetail &&
+        elements.actionDetail.value.trim()
+      )
+    );
+  }
+
+
+  function buildActionDetailPayload() {
+    const methods =
+      getSelectedActionMethods();
+
+    const manualDetail =
+      String(
+        elements.actionDetail.value || ''
+      ).trim();
+
+    const parts = [];
+
+    if (methods.length > 0) {
+      parts.push(
+        'รูปแบบการดำเนินการ: ' +
+        methods.join(', ')
+      );
+    }
+
+    if (manualDetail) {
+      parts.push(
+        'รายละเอียดเพิ่มเติม: ' +
+        manualDetail
+      );
+    }
+
+    return parts.join(
+      '\n'
+    );
   }
 
 
@@ -2076,8 +2173,7 @@
               getSelectedActionTaken(),
 
             actionDetail:
-              elements.actionDetail
-                .value.trim(),
+              buildActionDetailPayload(),
 
             confirmerType:
               elements.confirmerType.value,
@@ -2205,11 +2301,10 @@
 
     if (
       actionTaken === 'มี' &&
-      !elements.actionDetail
-        .value.trim()
+      !hasActionMethodOrDetail()
     ) {
       throw new Error(
-        'กรุณาระบุรายละเอียดการดำเนินการกับผู้กระทำ'
+        'กรุณาเลือกวิธีดำเนินการอย่างน้อย 1 รายการ หรือกรอกรายละเอียดเพิ่มเติม'
       );
     }
 
@@ -2271,10 +2366,7 @@
       Boolean(actionTaken) &&
       (
         actionTaken !== 'มี' ||
-        Boolean(
-          elements.actionDetail &&
-          elements.actionDetail.value.trim()
-        )
+        hasActionMethodOrDetail()
       ) &&
       Boolean(
         elements.confirmerType &&
@@ -2467,6 +2559,8 @@
 
     elements.actionDetail.required =
       false;
+
+    clearSelectedActionMethods();
 
     document
       .querySelectorAll(

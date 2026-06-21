@@ -1,7 +1,7 @@
 /************************************************************
  * correction.js
  * ฟอร์มแก้ไขและปิดรายการผ่าน LIFF
- * Version: 2026.06.21-correction-10
+ * Version: 2026.06.21-correction-11
  ************************************************************/
 
 (function (window, document) {
@@ -347,22 +347,30 @@
 
     document
       .querySelectorAll(
+        '[data-pick-index]'
+      )
+      .forEach(
+        function (button) {
+          button.addEventListener(
+            'click',
+            function () {
+              openImagePicker(
+                Number(
+                  button.dataset.pickIndex
+                ),
+                button
+              );
+            }
+          );
+        }
+      );
+
+    document
+      .querySelectorAll(
         '.evidence-input'
       )
       .forEach(
         function (input) {
-          input.addEventListener(
-            'click',
-            function () {
-              /*
-               * ช่วยให้ Android/LINE WebView
-               * สามารถเลือกภาพเดิมซ้ำหลังลบหรือเปลี่ยนไฟล์ได้
-               */
-              input.value =
-                '';
-            }
-          );
-
           input.addEventListener(
             'change',
             handleFileSelected
@@ -1780,6 +1788,63 @@
   }
 
 
+  function openImagePicker(
+    index,
+    button
+  ) {
+    const input =
+      document.querySelector(
+        '[data-file-index="' +
+        index +
+        '"]'
+      );
+
+    if (!input) {
+      showFormError(
+        'ไม่พบช่องเลือกภาพหลักฐาน'
+      );
+      return;
+    }
+
+    /*
+     * ต้องเรียก input.click() โดยตรงภายในเหตุการณ์แตะของผู้ใช้
+     * ห้าม await หรือ setTimeout ก่อนเปิด File Picker
+     */
+    input.value =
+      '';
+
+    if (button) {
+      button.classList.add(
+        'is-opening'
+      );
+    }
+
+    try {
+      input.click();
+    } catch (error) {
+      console.error(
+        'Open image picker error:',
+        error
+      );
+
+      showFormError(
+        'ไม่สามารถเปิดคลังภาพได้ กรุณาปิดหน้าแล้วเปิดใหม่จาก LINE'
+      );
+    } finally {
+      window.setTimeout(
+        function () {
+          if (button) {
+            button.classList.remove(
+              'is-opening'
+            );
+          }
+        },
+        500
+      );
+    }
+  }
+
+
   function handleFileSelected(event) {
     clearFormError();
 
@@ -1790,6 +1855,19 @@
       Number(
         input.dataset.fileIndex
       );
+
+    const pickerButton =
+      document.querySelector(
+        '[data-pick-index="' +
+        index +
+        '"]'
+      );
+
+    if (pickerButton) {
+      pickerButton.classList.remove(
+        'is-opening'
+      );
+    }
 
     const file =
       input.files &&
@@ -1828,7 +1906,7 @@
       typeof file !== 'object'
     ) {
       throw new Error(
-        'ไม่พบไฟล์ภาพที่เลือก'
+        'ไม่พบภาพที่เลือก'
       );
     }
 
@@ -1839,7 +1917,7 @@
 
     if (!normalizedMimeType) {
       throw new Error(
-        'หลักฐานหลังแก้ไขรองรับเฉพาะภาพ JPG, JPEG, PNG หรือ WEBP เท่านั้น'
+        'รองรับเฉพาะภาพ JPG, JPEG, PNG หรือ WEBP เท่านั้น'
       );
     }
 
@@ -1913,25 +1991,8 @@
         .trim()
         .toLowerCase();
 
-    const configuredTypes =
-      Array.isArray(
-        CONFIG.ALLOWED_IMAGE_TYPES
-      )
-        ? CONFIG.ALLOWED_IMAGE_TYPES
-            .map(
-              function (value) {
-                return String(
-                  value || ''
-                )
-                  .trim()
-                  .toLowerCase();
-              }
-            )
-        : [];
-
-    const supportedTypes =
+    const supportedMimeTypes =
       new Set([
-        ...configuredTypes,
         'image/jpeg',
         'image/jpg',
         'image/png',
@@ -1939,7 +2000,7 @@
       ]);
 
     if (
-      supportedTypes.has(
+      supportedMimeTypes.has(
         mimeType
       )
     ) {
@@ -1950,8 +2011,8 @@
     }
 
     /*
-     * LINE WebView และ File Manager บางรุ่น
-     * ส่ง file.type เป็นค่าว่าง จึงตรวจนามสกุลสำรอง
+     * File Manager บางรุ่นไม่ส่ง file.type
+     * จึงตรวจจากนามสกุลไฟล์เป็นทางสำรอง
      */
     if (
       fileName.endsWith(
@@ -2225,6 +2286,18 @@
         const file =
           selectedFiles[index];
 
+        if (
+          !String(
+            file && file.type || ''
+          ).toLowerCase().startsWith(
+            'image/'
+          )
+        ) {
+          throw new Error(
+            'พบไฟล์ที่ไม่ใช่ภาพในหลักฐานหลังแก้ไข'
+          );
+        }
+
         const normalizedMimeType =
           getCorrectionImageMimeType(
             file
@@ -2232,7 +2305,7 @@
 
         if (!normalizedMimeType) {
           throw new Error(
-            'พบไฟล์ที่ไม่ใช่ภาพที่ระบบรองรับในหลักฐานหลังแก้ไข'
+            'พบไฟล์ที่ไม่ใช่ภาพที่ระบบรองรับ'
           );
         }
 

@@ -575,7 +575,7 @@
 
       updateProgress(
         66,
-        'กำลังโหลดรายชื่อ OSM และ OTM'
+        'กำลังโหลดข้อมูล'
       );
 
       state.options =
@@ -1004,8 +1004,8 @@
 
     elements.returnTargetType.textContent =
       mode === 'LEGACY_ALL_TARGETS'
-        ? 'ลิงก์รุ่นเดิม · ระบบจะส่งผลกลับทุกปลายทางเดิม'
-        : 'ระบบกำหนดปลายทางให้อัตโนมัติ';
+        ? 'ระบบจะส่งข้อมูลกลับกลุ่ม หรือLineเดิม'
+        : 'แบบอัตโนมัติ';
 
     elements.returnTargetCard.dataset.mode =
       'legacy';

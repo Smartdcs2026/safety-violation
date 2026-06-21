@@ -130,6 +130,50 @@
     }
   </style>
 
+
+  <style>
+    /*
+     * File picker reliability fix for LINE WebView / Android
+     * Version: 2026.06.21-correction-10
+     */
+    .file-dropzone {
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .file-dropzone .evidence-input {
+      position: absolute !important;
+      inset: 0 !important;
+      z-index: 5;
+      display: block !important;
+      width: 100% !important;
+      height: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      clip: auto !important;
+      clip-path: none !important;
+      overflow: visible !important;
+      opacity: 0.001;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    .file-dropzone > :not(.evidence-input) {
+      pointer-events: none;
+    }
+
+    .file-dropzone:focus-within {
+      border-color: #4f7ee8;
+      background: #eef4ff;
+      box-shadow:
+        0 0 0 2px
+        rgba(79, 126, 232, 0.12);
+    }
+  </style>
+
 </head>
 
 <body class="correction-page">
@@ -748,7 +792,8 @@
                   id="correctionFile1"
                   class="evidence-input"
                   type="file"
-                  accept="image/jpeg,image/png,image/webp"
+                  accept="image/*"
+                  aria-label="เลือกภาพหลักฐานหลังแก้ไข 1"
                   data-file-index="0"
                 >
 
@@ -801,7 +846,8 @@
                   id="correctionFile2"
                   class="evidence-input"
                   type="file"
-                  accept="image/jpeg,image/png,image/webp"
+                  accept="image/*"
+                  aria-label="เลือกภาพหลักฐานหลังแก้ไข 2"
                   data-file-index="1"
                 >
 
@@ -854,7 +900,8 @@
                   id="correctionFile3"
                   class="evidence-input"
                   type="file"
-                  accept="image/jpeg,image/png,image/webp"
+                  accept="image/*"
+                  aria-label="เลือกภาพหลักฐานหลังแก้ไข 3"
                   data-file-index="2"
                 >
 
@@ -976,6 +1023,6 @@
 
   <script src="../config.js?v=20260621-friend-1"></script>
   <script src="../api.js?v=20260620-correction-4"></script>
-  <script src="../correction.js?v=20260621-correction-9"></script>
+  <script src="../correction.js?v=20260621-correction-10"></script>
 </body>
 </html>

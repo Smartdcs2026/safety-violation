@@ -4123,3 +4123,39 @@ button {
       minmax(0, 1fr);
   }
 }
+
+
+
+
+
+/************************************************************
+ * Center close button after correction completed
+ * Version: 2026.06.22-close-center-1
+ ************************************************************/
+
+/*
+ * ปุ่มปิดหน้าจะกินพื้นที่ Grid ทุกคอลัมน์
+ * แล้วจัดตัวเองไว้กึ่งกลาง
+ */
+.correction-state-card.is-closed
+.correction-state-actions
+#closeStateButton:not([hidden]) {
+  grid-column: 1 / -1;
+  justify-self: center;
+  width: min(100%, 260px);
+  min-height: 42px;
+  margin-inline: auto;
+}
+
+
+/*
+ * หน้าจอมือถือ
+ */
+@media (max-width: 640px) {
+  .correction-state-card.is-closed
+  .correction-state-actions
+  #closeStateButton:not([hidden]) {
+    width: min(78vw, 260px);
+  }
+}
+

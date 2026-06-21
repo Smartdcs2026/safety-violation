@@ -1,7 +1,7 @@
 /************************************************************
  * correction.js
  * ฟอร์มแก้ไขและปิดรายการผ่าน LIFF
- * Version: 2026.06.21-correction-9
+ * Version: 2026.06.21-correction-10
  ************************************************************/
 
 (function (window, document) {
@@ -351,6 +351,18 @@
       )
       .forEach(
         function (input) {
+          input.addEventListener(
+            'click',
+            function () {
+              /*
+               * ช่วยให้ Android/LINE WebView
+               * สามารถเลือกภาพเดิมซ้ำหลังลบหรือเปลี่ยนไฟล์ได้
+               */
+              input.value =
+                '';
+            }
+          );
+
           input.addEventListener(
             'change',
             handleFileSelected
@@ -1811,35 +1823,23 @@
 
 
   function validateFile(file, index) {
-    const mimeType =
-      String(
-        file && file.type || ''
-      ).toLowerCase();
+    if (
+      !file ||
+      typeof file !== 'object'
+    ) {
+      throw new Error(
+        'ไม่พบไฟล์ภาพที่เลือก'
+      );
+    }
 
-    const allowedImages =
-      Array.isArray(
-        CONFIG.ALLOWED_IMAGE_TYPES
-      )
-        ? CONFIG.ALLOWED_IMAGE_TYPES
-        : [
-            'image/jpeg',
-            'image/png',
-            'image/webp'
-          ];
-
-    const isImage =
-      allowedImages.includes(
-        mimeType
+    const normalizedMimeType =
+      getCorrectionImageMimeType(
+        file
       );
 
-    /*
-     * หลักฐานหลังแก้ไขรับเฉพาะภาพเท่านั้น
-     * แม้ config.js จะยังรองรับวิดีโอสำหรับหน้าแจ้งปัญหาหลัก
-     * หน้า correction จะไม่รับวิดีโอทุกกรณี
-     */
-    if (!isImage) {
+    if (!normalizedMimeType) {
       throw new Error(
-        'หลักฐานหลังแก้ไขรองรับเฉพาะไฟล์ภาพ JPG, PNG หรือ WEBP เท่านั้น'
+        'หลักฐานหลังแก้ไขรองรับเฉพาะภาพ JPG, JPEG, PNG หรือ WEBP เท่านั้น'
       );
     }
 
@@ -1893,6 +1893,105 @@
         formatBytes(maximumTotal)
       );
     }
+  }
+
+
+  function getCorrectionImageMimeType(
+    file
+  ) {
+    const mimeType =
+      String(
+        file && file.type || ''
+      )
+        .trim()
+        .toLowerCase();
+
+    const fileName =
+      String(
+        file && file.name || ''
+      )
+        .trim()
+        .toLowerCase();
+
+    const configuredTypes =
+      Array.isArray(
+        CONFIG.ALLOWED_IMAGE_TYPES
+      )
+        ? CONFIG.ALLOWED_IMAGE_TYPES
+            .map(
+              function (value) {
+                return String(
+                  value || ''
+                )
+                  .trim()
+                  .toLowerCase();
+              }
+            )
+        : [];
+
+    const supportedTypes =
+      new Set([
+        ...configuredTypes,
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'image/webp'
+      ]);
+
+    if (
+      supportedTypes.has(
+        mimeType
+      )
+    ) {
+      return mimeType ===
+        'image/jpg'
+        ? 'image/jpeg'
+        : mimeType;
+    }
+
+    /*
+     * LINE WebView และ File Manager บางรุ่น
+     * ส่ง file.type เป็นค่าว่าง จึงตรวจนามสกุลสำรอง
+     */
+    if (
+      fileName.endsWith(
+        '.jpg'
+      ) ||
+      fileName.endsWith(
+        '.jpeg'
+      )
+    ) {
+      return 'image/jpeg';
+    }
+
+    if (
+      fileName.endsWith(
+        '.png'
+      )
+    ) {
+      return 'image/png';
+    }
+
+    if (
+      fileName.endsWith(
+        '.webp'
+      )
+    ) {
+      return 'image/webp';
+    }
+
+    return '';
+  }
+
+
+  function isSupportedCorrectionImage(
+    file
+  ) {
+    return Boolean(
+      getCorrectionImageMimeType(
+        file
+      )
+    );
   }
 
 
@@ -1970,7 +2069,9 @@
       file.name;
 
     size.textContent =
-      file.type +
+      getCorrectionImageMimeType(
+        file
+      ) +
       ' · ' +
       formatBytes(file.size);
 
@@ -2124,15 +2225,14 @@
         const file =
           selectedFiles[index];
 
-        if (
-          !String(
-            file && file.type || ''
-          ).toLowerCase().startsWith(
-            'image/'
-          )
-        ) {
+        const normalizedMimeType =
+          getCorrectionImageMimeType(
+            file
+          );
+
+        if (!normalizedMimeType) {
           throw new Error(
-            'พบไฟล์ที่ไม่ใช่ภาพในหลักฐานหลังแก้ไข'
+            'พบไฟล์ที่ไม่ใช่ภาพที่ระบบรองรับในหลักฐานหลังแก้ไข'
           );
         }
 
@@ -2144,7 +2244,7 @@
             file.name,
 
           mimeType:
-            file.type,
+            normalizedMimeType,
 
           base64:
             dataUrl
@@ -2334,10 +2434,8 @@
     const invalidFile =
       selectedImages.find(
         function (file) {
-          return !String(
-            file && file.type || ''
-          ).toLowerCase().startsWith(
-            'image/'
+          return !isSupportedCorrectionImage(
+            file
           );
         }
       );

@@ -1,21 +1,16 @@
 /************************************************************
  * app.js
  * ระบบฟอร์มแจ้งการกระทำที่ไม่ปลอดภัย
+ * Version: 2026.06.21-staged-upload-2
  *
  * ปรับปรุงรอบนี้:
- * - ตรวจ Health ก่อนโหลดตัวเลือก
- * - โหลดตัวเลือกซ้ำอัตโนมัติเมื่อเครือข่ายสะดุด
- * - เปิดปุ่มบันทึกเมื่อข้อมูลจำเป็นครบจริงเท่านั้น
- * - แจ้งชัดเจนว่าข้อมูลส่วนใดหาย
- * - แสดงความคืบหน้าการเตรียมไฟล์และบันทึก
- * - ป้องกันการกดบันทึกซ้ำ
- * - รองรับภาพที่ผ่าน Image Editor
- * - แสดงผลการส่ง Flex แยกรายปลายทางหลังบันทึก
- * - แก้ปุ่มบันทึกค้าง disabled หลังโหลดตัวเลือกสำเร็จ
- * - แก้โครงสร้างวงเล็บของ loadInitialData() ให้ถูกต้อง
- * - เปิดหน้าต่างค้นหารายชื่อกลุ่ม บุคคล และห้องทั้งหมด
- * - เลือกและจัดลำดับปลายทาง LINE ได้สูงสุด 5 รายการ
- * - ส่ง lineTargets พร้อมคงข้อมูลปลายทางแรกเพื่อรองรับระบบเดิม
+ * - ใช้การบันทึกแบบแบ่งขั้นตอน reserve/upload/finalize
+ * - อัปโหลดหลักฐานครั้งละ 1 ไฟล์ ลดความเสี่ยงคำขอขนาดใหญ่
+ * - แสดงความคืบหน้าตามขั้นตอนจริง
+ * - คง fallback ไปวิธีเดิมเมื่อ Worker รุ่นเก่ายังไม่รองรับ
+ * - คงฟังก์ชันเดิมทั้งหมด เช่น Image Editor และหลายปลายทาง LINE
+ * - ไม่ล้างฟอร์มหากผลขั้น Finalize ยังไม่แน่นอน
+ * - ป้องกันการกดบันทึกซ้ำระหว่างทำรายการ
  ************************************************************/
 
 (function (window, document) {
@@ -825,6 +820,19 @@
       throw new Error(
         'SafetyAPI ไม่ครบ: ' +
         missing.join(', ')
+      );
+    }
+
+    /*
+     * createReportStaged เป็นความสามารถใหม่
+     * หากยังไม่พบ ระบบยังใช้ createReport เดิมได้
+     */
+    if (
+      typeof API.createReportStaged !==
+      'function'
+    ) {
+      console.warn(
+        'SafetyAPI ยังไม่รองรับ staged upload ระบบจะใช้วิธีเดิมชั่วคราว'
       );
     }
   }
@@ -3273,6 +3281,16 @@
         );
       }
 
+      if (
+        window.navigator &&
+        window.navigator.onLine ===
+          false
+      ) {
+        throw new Error(
+          'อุปกรณ์ไม่มีการเชื่อมต่ออินเทอร์เน็ต กรุณาเชื่อมต่อแล้วลองใหม่'
+        );
+      }
+
       validateForm();
 
       state.submitting =
@@ -3288,11 +3306,11 @@
       showLoading(
         'กำลังบันทึกข้อมูล',
         'กำลังตรวจสอบข้อมูล',
-        6
+        5
       );
 
       updateProgress(
-        12,
+        10,
         'ตรวจสอบข้อมูลเรียบร้อย'
       );
 
@@ -3304,6 +3322,10 @@
       const evidenceFiles =
         [];
 
+      /*
+       * เตรียมไฟล์จาก File/Blob เป็น Data URL
+       * รองรับไฟล์ภาพที่ผ่าน Image Editor เหมือนเดิม
+       */
       for (
         let index = 0;
         index <
@@ -3314,10 +3336,10 @@
           selectedFiles[index];
 
         const startPercent =
-          18;
+          14;
 
         const endPercent =
-          58;
+          44;
 
         const percent =
           startPercent +
@@ -3349,13 +3371,24 @@
 
         evidenceFiles.push({
           fileName:
-            file.name,
+            file.name ||
+            (
+              'evidence-' +
+              (
+                index + 1
+              )
+            ),
 
           mimeType:
             file.type,
 
           base64:
-            dataUrl
+            dataUrl,
+
+          sizeBytes:
+            Number(
+              file.size
+            ) || 0
         });
 
         updateProgress(
@@ -3376,13 +3409,15 @@
           (
             index + 1
           ) +
+          '/' +
+          selectedFiles.length +
           ' เรียบร้อย'
         );
       }
 
       updateProgress(
-        64,
-        'กำลังจัดเตรียมข้อมูล'
+        46,
+        'กำลังจัดเตรียมข้อมูลรายการ'
       );
 
       const selectedTargets =
@@ -3458,21 +3493,52 @@
           evidenceFiles
       };
 
-      updateProgress(
-        72,
-        'กำลังอัปโหลดไฟล์ และเตรียมส่ง ' +
-        selectedTargets.length +
-        ' ปลายทาง'
-      );
+      let response;
 
-      const response =
-        await API.createReport(
-          payload,
-          requestId
+      if (
+        typeof API.createReportStaged ===
+        'function'
+      ) {
+        updateProgress(
+          48,
+          'กำลังเริ่มบันทึกแบบแบ่งขั้นตอน'
         );
 
+        response =
+          await API.createReportStaged(
+            payload,
+            {
+              requestId:
+                requestId,
+
+              allowLegacyFallback:
+                true,
+
+              onProgress:
+                handleStagedSubmitProgress
+            }
+          );
+
+      } else {
+        /*
+         * Compatibility สำหรับ api.js รุ่นเดิม
+         */
+        updateProgress(
+          58,
+          'กำลังอัปโหลดไฟล์ และเตรียมส่ง ' +
+          selectedTargets.length +
+          ' ปลายทาง'
+        );
+
+        response =
+          await API.createReport(
+            payload,
+            requestId
+          );
+      }
+
       updateProgress(
-        94,
+        98,
         'กำลังตรวจสอบผลการส่ง Flex Message'
       );
 
@@ -3536,6 +3602,112 @@
         400
       );
     }
+  }
+
+
+  /**
+   * แปลง Progress จาก API แบบแบ่งขั้นตอน
+   * ให้อยู่ในช่วง 48-97% ของหน้าเว็บ
+   */
+  function handleStagedSubmitProgress(
+    detail
+  ) {
+    const info =
+      detail &&
+      typeof detail === 'object'
+        ? detail
+        : {};
+
+    const apiPercent =
+      Math.max(
+        0,
+        Math.min(
+          100,
+          Number(
+            info.percent
+          ) || 0
+        )
+      );
+
+    const mappedPercent =
+      48 +
+      (
+        apiPercent *
+        0.49
+      );
+
+    let message =
+      String(
+        info.message ||
+        'กำลังบันทึกข้อมูล'
+      );
+
+    if (
+      info.stage ===
+        'UPLOADING' &&
+      info.fileNumber &&
+      info.fileCount
+    ) {
+      message =
+        'กำลังอัปโหลดหลักฐาน ' +
+        info.fileNumber +
+        '/' +
+        info.fileCount;
+    }
+
+    if (
+      info.stage ===
+        'FILE_UPLOADED' &&
+      info.fileNumber &&
+      info.fileCount
+    ) {
+      message =
+        'อัปโหลดหลักฐาน ' +
+        info.fileNumber +
+        '/' +
+        info.fileCount +
+        ' สำเร็จ';
+    }
+
+    if (
+      info.stage ===
+        'FINALIZING'
+    ) {
+      message =
+        'กำลังบันทึกข้อมูล สร้างลิงก์ และส่ง Flex Message';
+    }
+
+    if (
+      info.stage ===
+        'LEGACY_FALLBACK'
+    ) {
+      message =
+        'กำลังใช้วิธีบันทึกเดิมเพื่อให้ระบบทำงานต่อได้';
+    }
+
+    if (
+      info.stage ===
+        'ROLLING_BACK'
+    ) {
+      message =
+        'เกิดข้อผิดพลาด กำลังล้างข้อมูลที่ยังไม่สมบูรณ์';
+    }
+
+    if (
+      info.stage ===
+        'FINALIZE_UNCERTAIN'
+    ) {
+      message =
+        'กำลังตรวจสอบผลขั้นตอนสุดท้าย';
+    }
+
+    updateProgress(
+      Math.min(
+        mappedPercent,
+        97
+      ),
+      message
+    );
   }
 
 
@@ -4232,11 +4404,49 @@
   function buildErrorMessage(
     error
   ) {
-    const message =
+    let message =
       error &&
       error.message
         ? error.message
         : 'เกิดข้อผิดพลาด';
+
+    const details =
+      error &&
+      error.details &&
+      typeof error.details ===
+        'object'
+        ? error.details
+        : {};
+
+    /*
+     * ขั้น Finalize อาจสำเร็จที่เซิร์ฟเวอร์แล้ว
+     * แต่คำตอบกลับไม่ถึงอุปกรณ์ ห้ามล้างฟอร์มหรือกดซ้ำทันที
+     */
+    if (
+      details.recoveryRequired ===
+        true ||
+      details.canRetryFinalize ===
+        true
+    ) {
+      message +=
+        ' ระบบอาจบันทึกรายการสำเร็จแล้ว กรุณาตรวจสอบรหัสปัญหาหรือข้อความใน LINE ก่อนกดบันทึกซ้ำ';
+
+      if (
+        details.caseId
+      ) {
+        message +=
+          ' รหัสที่ต้องตรวจสอบ: ' +
+          details.caseId;
+      }
+    }
+
+    if (
+      details.rollbackFailed ===
+        true
+    ) {
+      message +=
+        ' ระบบไม่สามารถล้างข้อมูลชั่วคราวได้ครบ กรุณาแจ้งผู้ดูแลระบบ';
+    }
 
     const requestId =
       error &&

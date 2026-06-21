@@ -26,6 +26,110 @@
     rel="stylesheet"
     href="../styles.css?v=20260620-correction-6"
   >
+
+  <style>
+    .action-method-fieldset {
+      min-width: 0;
+      margin: 0 0 12px;
+      padding: 0;
+      border: 0;
+    }
+
+    .action-method-fieldset legend {
+      margin-bottom: 8px;
+      color: #27364f;
+      font-size: 0.76rem;
+      font-weight: 800;
+    }
+
+    .action-method-grid {
+      display: grid;
+      grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+      gap: 7px;
+    }
+
+    .action-method-option {
+      position: relative;
+      display: flex;
+      min-width: 0;
+      min-height: 42px;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border: 1px solid #d5dceb;
+      border-radius: 11px;
+      background: #ffffff;
+      cursor: pointer;
+      transition:
+        border-color 0.15s ease,
+        background 0.15s ease,
+        box-shadow 0.15s ease;
+    }
+
+    .action-method-option-wide {
+      grid-column: 1 / -1;
+    }
+
+    .action-method-option input {
+      width: 18px;
+      height: 18px;
+      flex: 0 0 auto;
+      margin: 0;
+      accent-color: #326bd9;
+    }
+
+    .action-method-option span {
+      min-width: 0;
+      color: #344054;
+      font-size: 0.7rem;
+      font-weight: 750;
+      line-height: 1.3;
+    }
+
+    .action-method-option:has(input:checked) {
+      border-color: #4f7ee8;
+      background: #eef4ff;
+      box-shadow:
+        0 0 0 2px
+        rgba(79, 126, 232, 0.1);
+    }
+
+    .action-method-option:has(input:checked) span {
+      color: #1746a2;
+    }
+
+    .action-method-help {
+      display: block;
+      margin-top: 7px;
+      color: #667085;
+      font-size: 0.58rem;
+      line-height: 1.4;
+    }
+
+    .optional-label {
+      margin-left: 5px;
+      color: #7c8799;
+      font-size: 0.56rem;
+      font-weight: 650;
+    }
+
+    @media (max-width: 350px) {
+      .action-method-grid {
+        gap: 5px;
+      }
+
+      .action-method-option {
+        min-height: 39px;
+        padding: 7px 8px;
+      }
+
+      .action-method-option span {
+        font-size: 0.64rem;
+      }
+    }
+  </style>
+
 </head>
 
 <body class="correction-page">
@@ -463,21 +567,82 @@
             class="field correction-conditional-field"
             hidden
           >
+            <fieldset class="action-method-fieldset">
+              <legend>
+                รูปแบบการดำเนินการ
+                <span class="required">*</span>
+              </legend>
+
+              <div
+                id="actionMethodOptions"
+                class="action-method-grid"
+              >
+                <label class="action-method-option">
+                  <input
+                    type="checkbox"
+                    name="actionMethod"
+                    value="เรียกพูดคุย"
+                  >
+                  <span>เรียกพูดคุย</span>
+                </label>
+
+                <label class="action-method-option">
+                  <input
+                    type="checkbox"
+                    name="actionMethod"
+                    value="Coaching"
+                  >
+                  <span>Coaching</span>
+                </label>
+
+                <label class="action-method-option">
+                  <input
+                    type="checkbox"
+                    name="actionMethod"
+                    value="แผนพัฒนา"
+                  >
+                  <span>แผนพัฒนา</span>
+                </label>
+
+                <label class="action-method-option">
+                  <input
+                    type="checkbox"
+                    name="actionMethod"
+                    value="ใบเตือนวาจา"
+                  >
+                  <span>ใบเตือนวาจา</span>
+                </label>
+
+                <label class="action-method-option action-method-option-wide">
+                  <input
+                    type="checkbox"
+                    name="actionMethod"
+                    value="ใบเตือนลายลักษณ์อักษร"
+                  >
+                  <span>ใบเตือนลายลักษณ์อักษร</span>
+                </label>
+              </div>
+
+              <small class="action-method-help">
+                เลือกได้มากกว่า 1 รายการ หรือกรอกรายละเอียดเพิ่มเติมเอง
+              </small>
+            </fieldset>
+
             <label for="actionDetail">
-              รายละเอียดการดำเนินการกับผู้กระทำ
-              <span class="required">*</span>
+              รายละเอียดเพิ่มเติม
+              <span class="optional-label">ไม่บังคับเมื่อเลือกตัวเลือกแล้ว</span>
             </label>
 
             <textarea
               id="actionDetail"
               rows="4"
               maxlength="5000"
-              placeholder="ระบุการตักเตือน การอบรม หรือมาตรการที่ดำเนินการ"
+              placeholder="ระบุรายละเอียดเพิ่มเติม เช่น วันที่พูดคุย ผู้รับผิดชอบ หรือเงื่อนไขติดตามผล"
             ></textarea>
 
             <div class="field-footer">
               <small>
-                บังคับกรอกเมื่อเลือกว่ามีการดำเนินการ
+                ต้องเลือกอย่างน้อย 1 ตัวเลือก หรือกรอกรายละเอียดเพิ่มเติม
               </small>
 
               <span id="actionDetailCounter">
@@ -811,6 +976,6 @@
 
   <script src="../config.js?v=20260621-friend-1"></script>
   <script src="../api.js?v=20260620-correction-4"></script>
-  <script src="../correction.js?v=20260620-correction-8"></script>
+  <script src="../correction.js?v=20260621-correction-9"></script>
 </body>
 </html>

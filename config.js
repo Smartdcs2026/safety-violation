@@ -30,7 +30,7 @@
       '2010443605-jWYyda1e',
 
     LINE_BOT_FRIEND_URL:
-      'https://line.me/R/ti/p/@629mxrhv',
+      'https://line.me/R/ti/p/%40629mxrbv',
 
     MAX_FILES:
       3,
